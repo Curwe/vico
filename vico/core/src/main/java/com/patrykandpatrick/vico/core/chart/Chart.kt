@@ -106,6 +106,7 @@ public interface Chart<in Model> : BoundsAware, ChartInsetter {
     public fun drawScrollableContent(
         context: ChartDrawContext,
         model: Model,
+        clickedChartItemIndex: Int?
     )
 
     /**

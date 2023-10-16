@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import com.patrykandpatrick.vico.compose.chart.ClickWrapper
 import com.patrykandpatrick.vico.compose.chart.scroll.ChartScrollState
 import com.patrykandpatrick.vico.compose.gesture.OnZoom
 import com.patrykandpatrick.vico.core.model.Point
@@ -32,6 +33,7 @@ internal fun Modifier.chartTouchEvent(
     isScrollEnabled: Boolean,
     scrollableState: ChartScrollState,
     onZoom: OnZoom?,
+    clickWrapper: ClickWrapper?
 ): Modifier =
     scrollable(
         state = scrollableState,
@@ -46,7 +48,10 @@ internal fun Modifier.chartTouchEvent(
                         while (true) {
                             val event = awaitPointerEvent()
                             when (event.type) {
-                                PointerEventType.Press -> setTouchPoint(event.changes.first().position.point)
+                                PointerEventType.Press -> {
+                                    setTouchPoint(event.changes.first().position.point)
+                                    clickWrapper?.isClicked = true
+                                }
                                 PointerEventType.Release -> setTouchPoint(null)
                             }
                         }

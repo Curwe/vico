@@ -110,11 +110,13 @@ public open class ColumnChart(
     override fun drawChart(
         context: ChartDrawContext,
         model: ChartEntryModel,
+        clickedChartItemIndex: Int?
     ): Unit = with(context) {
         entryLocationMap.clear()
         drawChartInternal(
             chartValues = chartValuesManager.getChartValues(axisPosition = targetVerticalAxisPosition),
             model = model,
+            clickedChartItemIndex = clickedChartItemIndex
         )
         heightMap.clear()
     }
@@ -122,6 +124,7 @@ public open class ColumnChart(
     protected open fun ChartDrawContext.drawChartInternal(
         chartValues: ChartValues,
         model: ChartEntryModel,
+        clickedChartItemIndex: Int?
     ) {
         val yRange = (chartValues.maxY - chartValues.minY).takeIf { it != 0f } ?: return
         val heightMultiplier = bounds.height() / yRange
