@@ -218,8 +218,8 @@ public interface AxisItemPlacer {
              * they’re immediately above the [Chart]’s bounds. If the chart has a top axis, the shifted tick will then
              * be aligned with this axis, and the shifted guideline will be hidden.
              */
-            public fun default(maxItemCount: Int = DEF_LABEL_COUNT, shiftTopLines: Boolean = true): Vertical =
-                DefaultVerticalAxisItemPlacer(maxItemCount, shiftTopLines)
+            public fun default(maxItemCount: Int = DEF_LABEL_COUNT, shiftTopLines: Boolean = true, useSimpleLabelValues: Boolean = true): Vertical =
+                DefaultVerticalAxisItemPlacer(maxItemCount, shiftTopLines, useSimpleLabelValues)
         }
     }
 }

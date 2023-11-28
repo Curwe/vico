@@ -31,9 +31,11 @@ import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -62,6 +64,7 @@ import com.patrykandpatrick.vico.core.axis.AxisManager
 import com.patrykandpatrick.vico.core.axis.AxisPosition
 import com.patrykandpatrick.vico.core.axis.AxisRenderer
 import com.patrykandpatrick.vico.core.chart.Chart
+import com.patrykandpatrick.vico.core.chart.composed.ComposedChart
 import com.patrykandpatrick.vico.core.chart.dimensions.MutableHorizontalDimensions
 import com.patrykandpatrick.vico.core.chart.draw.chartDrawContext
 import com.patrykandpatrick.vico.core.chart.draw.drawMarker
@@ -75,6 +78,7 @@ import com.patrykandpatrick.vico.core.chart.values.ChartValuesProvider
 import com.patrykandpatrick.vico.core.chart.values.toChartValuesProvider
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
 import com.patrykandpatrick.vico.core.entry.ChartModelProducer
+import com.patrykandpatrick.vico.core.extension.getClosestMarkerEntryModel
 import com.patrykandpatrick.vico.core.extension.set
 import com.patrykandpatrick.vico.core.extension.spToPx
 import com.patrykandpatrick.vico.core.layout.VirtualLayout
@@ -285,6 +289,7 @@ internal fun <Model : ChartEntryModel> ChartImpl(
     )
     val scrollListener = rememberScrollListener(markerTouchPoint)
     val lastMarkerEntryModels = remember { mutableStateOf(emptyList<Marker.EntryModel>()) }
+    var previousIndex by remember { mutableIntStateOf(-1) }
 
     axisManager.setAxes(startAxis, topAxis, endAxis, bottomAxis)
     chartScrollState.registerScrollListener(scrollListener)
@@ -295,6 +300,12 @@ internal fun <Model : ChartEntryModel> ChartImpl(
     val coroutineScope = rememberCoroutineScope()
     var previousModelID by remember { ValueWrapper(model.id) }
     val horizontalDimensions = remember { MutableHorizontalDimensions() }
+    val clickWrapper = remember { ClickWrapper(false) }
+    val touchPoint = remember(marker, clickWrapper.isClicked) {
+        markerTouchPoint
+            .component2()
+            .takeIf { marker != null }
+    }
 
     val onZoom = rememberZoomState(
         zoom = zoom,
@@ -308,14 +319,11 @@ internal fun <Model : ChartEntryModel> ChartImpl(
         modifier = Modifier
             .fillMaxSize()
             .chartTouchEvent(
-                setTouchPoint = remember(marker == null) {
-                    markerTouchPoint
-                        .component2()
-                        .takeIf { marker != null }
-                },
+                setTouchPoint = touchPoint,
                 isScrollEnabled = chartScrollSpec.isScrollEnabled,
                 scrollableState = chartScrollState,
                 onZoom = onZoom.takeIf { isZoomEnabled },
+                clickWrapper = clickWrapper
             ),
     ) {
         bounds.set(left = 0, top = 0, right = size.width, bottom = size.height)
@@ -374,10 +382,30 @@ internal fun <Model : ChartEntryModel> ChartImpl(
             zoom = finalZoom,
         )
 
+        val tappedChart = if (chart is ComposedChart<*>) chart.charts[1] else chart
+        val entryModel = markerTouchPoint.value?.let {
+            tappedChart.entryLocationMap.getClosestMarkerEntryModel(it)
+        }
+
+        var clickedChartItemIndex = entryModel?.firstOrNull()?.index
+
+        clickedChartItemIndex?.let {
+            if (clickWrapper.isClicked) {
+                clickWrapper.isClicked = false
+                if (previousIndex == clickedChartItemIndex) {
+                    previousIndex = -1
+                    clickedChartItemIndex = null
+                    touchPoint?.invoke(null)
+                }
+
+                previousIndex = clickedChartItemIndex ?: -1
+            }
+        }
+
         val count = if (fadingEdges != null) chartDrawContext.saveLayer() else -1
 
         axisManager.drawBehindChart(chartDrawContext)
-        chart.drawScrollableContent(chartDrawContext, model)
+        chart.drawScrollableContent(chartDrawContext, model, clickedChartItemIndex)
 
         fadingEdges?.apply {
             applyFadingEdges(chartDrawContext, chart.bounds)
@@ -404,6 +432,8 @@ internal fun <Model : ChartEntryModel> ChartImpl(
         measureContext.reset()
     }
 }
+
+public data class ClickWrapper(var isClicked: Boolean)
 
 @Composable
 internal fun ChartBox(

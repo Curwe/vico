@@ -286,6 +286,7 @@ public open class LineChart(
     override fun drawChart(
         context: ChartDrawContext,
         model: ChartEntryModel,
+        clickedChartItemIndex: Int?
     ): Unit = with(context) {
         resetTempData()
 

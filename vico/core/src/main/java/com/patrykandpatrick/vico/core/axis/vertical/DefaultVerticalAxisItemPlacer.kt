@@ -27,6 +27,7 @@ import kotlin.math.max
 internal class DefaultVerticalAxisItemPlacer(
     private val maxItemCount: Int,
     private val shiftTopLines: Boolean,
+    private val useSimpleLabelValues: Boolean
 ) : AxisItemPlacer.Vertical {
 
     init {
@@ -50,7 +51,7 @@ internal class DefaultVerticalAxisItemPlacer(
     ): List<Float> {
         if (maxItemCount == 0) return emptyList()
         val chartValues = context.chartValuesProvider.getChartValues(position)
-        return if (chartValues.minY * chartValues.maxY >= 0) {
+        return if (chartValues.minY * chartValues.maxY >= 0 || useSimpleLabelValues) {
             getSimpleLabelValues(axisHeight, maxLabelHeight, chartValues)
         } else {
             getMixedLabelValues(axisHeight, maxLabelHeight, chartValues)

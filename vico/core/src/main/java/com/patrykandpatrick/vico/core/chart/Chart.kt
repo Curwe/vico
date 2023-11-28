@@ -104,12 +104,14 @@ public interface Chart<in Model> : BoundsAware, ChartInsetter {
      *
      * @param context holds the data needed to draw the [Chart].
      * @param model holds data about the [Chart]’s entries.
+     * @param clickedChartItemIndex helps keep track on what is tapped
      *
      * @see ChartDrawContext
      */
     public fun drawScrollableContent(
         context: ChartDrawContext,
         model: Model,
+        clickedChartItemIndex: Int?
     )
 
     /**
