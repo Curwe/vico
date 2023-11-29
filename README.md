@@ -1,5 +1,13 @@
 # Vico
 
+## Export lib .aar files
+1. Open gradle menu from the right hand side.
+2. Expand Vico -> vico. Here you should see gradle projects "compose", "core" and a few more.
+3. On both "compose" and "core". Expand ... -> Tasks -> build -> run assemble
+4. Navigate to the build/output folder of both "compose" and "core", there should be 2 .aar files.
+5. Rename *core-release.aar* to *vico-core.aar* and *compose-release.aar* to *vico-compose.aar*
+6. Move *vico-core.aar* and *vico-compose.aar* to root libs folder in your project.
+
 ![](https://img.shields.io/maven-central/v/com.patrykandpatrick.vico/core)
 ![](https://img.shields.io/github/actions/workflow/status/patrykandpatrick/vico/build-debug-apk.yml?branch=master)
 ![](https://www.codefactor.io/repository/github/patrykandpatrick/vico/badge)
