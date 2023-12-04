@@ -151,11 +151,10 @@ public open class ColumnChart(
 
         model.entries.forEachIndexed { index, entryCollection ->
 
-            //column = columns.getRepeating(index)
+            column = columns.getRepeating(index)
             drawingStart = getDrawingStart(index, model.entries.size) - horizontalScroll
 
             entryCollection.forEachInAbsolutelyIndexed(chartValues.minX..chartValues.maxX) { entryIndex, entry ->
-                column = columns.getRepeating(entryIndex)
 
                 val columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)
                 height = (columnInfo?.height ?: (abs(entry.y) / chartValues.lengthY)) * bounds.height()

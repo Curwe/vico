@@ -19,3 +19,4 @@ captures
 .externalNativeBuild
 .cxx
 .idea/*
+.idea/inspectionProfiles/Project_Default.xml
