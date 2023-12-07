@@ -37,6 +37,7 @@ import com.patrykandpatrick.vico.core.component.text.inBounds
 import com.patrykandpatrick.vico.core.context.MeasureContext
 import com.patrykandpatrick.vico.core.entry.ChartEntry
 import com.patrykandpatrick.vico.core.entry.ChartEntryModel
+import com.patrykandpatrick.vico.core.entry.FloatColoredEntry
 import com.patrykandpatrick.vico.core.entry.diff.DefaultDrawingModelInterpolator
 import com.patrykandpatrick.vico.core.entry.diff.DrawingModelInterpolator
 import com.patrykandpatrick.vico.core.entry.diff.ExtraStore
@@ -122,7 +123,6 @@ public open class ColumnChart(
     override fun drawChart(
         context: ChartDrawContext,
         model: ChartEntryModel,
-        clickedChartItemIndex: Int?
     ): Unit = with(context) {
         entryLocationMap.clear()
         drawChartInternal(
@@ -151,10 +151,12 @@ public open class ColumnChart(
 
         model.entries.forEachIndexed { index, entryCollection ->
 
-            column = columns.getRepeating(index)
             drawingStart = getDrawingStart(index, model.entries.size) - horizontalScroll
 
             entryCollection.forEachInAbsolutelyIndexed(chartValues.minX..chartValues.maxX) { entryIndex, entry ->
+
+                column = columns.getRepeating(index)
+                if (entry is FloatColoredEntry) column = entry.lineComponent
 
                 val columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)
                 height = (columnInfo?.height ?: (abs(entry.y) / chartValues.lengthY)) * bounds.height()

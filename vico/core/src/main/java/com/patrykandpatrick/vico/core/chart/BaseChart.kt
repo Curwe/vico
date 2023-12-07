@@ -86,11 +86,10 @@ public abstract class BaseChart<in Model : ChartEntryModel> : Chart<Model>, Boun
     override fun drawScrollableContent(
         context: ChartDrawContext,
         model: Model,
-        clickedChartItemIndex: Int?
     ): Unit = with(context) {
         insets.clear()
         getInsets(this, insets, horizontalDimensions)
-        drawChartInternal(context, model, clickedChartItemIndex)
+        drawChartInternal(context, model)
     }
 
     override fun drawNonScrollableContent(
@@ -123,7 +122,6 @@ public abstract class BaseChart<in Model : ChartEntryModel> : Chart<Model>, Boun
     protected open fun drawChartInternal(
         context: ChartDrawContext,
         model: Model,
-        clickedChartItemIndex: Int?
     ): Unit = with(context) {
         canvas.inClip(
             left = bounds.left - insets.getLeft(isLtr),
@@ -133,7 +131,7 @@ public abstract class BaseChart<in Model : ChartEntryModel> : Chart<Model>, Boun
         ) {
             drawDecorationBehindChart(context)
             if (model.entries.isNotEmpty()) {
-                drawChart(context, model, clickedChartItemIndex)
+                drawChart(context, model)
             }
         }
     }
@@ -141,7 +139,6 @@ public abstract class BaseChart<in Model : ChartEntryModel> : Chart<Model>, Boun
     protected abstract fun drawChart(
         context: ChartDrawContext,
         model: Model,
-        clickedChartItemIndex: Int?
     )
 
     protected fun drawDecorationBehindChart(context: ChartDrawContext) {

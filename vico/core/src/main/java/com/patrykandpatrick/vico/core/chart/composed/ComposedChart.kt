@@ -84,11 +84,10 @@ public class ComposedChart<Model : ChartEntryModel>(
     override fun drawChart(
         context: ChartDrawContext,
         model: ComposedChartEntryModel<Model>,
-        clickedChartItemIndex: Int?
     ) {
         entryLocationMap.clear()
         model.forEachModelWithChart { item, chart ->
-            chart.drawScrollableContent(context, item, clickedChartItemIndex)
+            chart.drawScrollableContent(context, item)
             entryLocationMap.updateAll(chart.entryLocationMap)
         }
     }
@@ -96,11 +95,10 @@ public class ComposedChart<Model : ChartEntryModel>(
     override fun drawChartInternal(
         context: ChartDrawContext,
         model: ComposedChartEntryModel<Model>,
-        clickedChartItemIndex: Int?
     ) {
         drawDecorationBehindChart(context)
         if (model.entries.isNotEmpty()) {
-            drawChart(context, model, clickedChartItemIndex)
+            drawChart(context, model)
         }
     }
 

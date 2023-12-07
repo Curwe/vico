@@ -524,7 +524,7 @@ public abstract class BaseChartView<Model : ChartEntryModel> internal constructo
             val count = if (fadingEdges != null) chartDrawContext.saveLayer() else -1
 
             axisManager.drawBehindChart(chartDrawContext)
-            chart.drawScrollableContent(chartDrawContext, model, null)
+            chart.drawScrollableContent(chartDrawContext, model)
 
             fadingEdges?.apply {
                 applyFadingEdges(chartDrawContext, chart.bounds)

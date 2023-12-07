@@ -405,7 +405,7 @@ internal fun <Model : ChartEntryModel> ChartImpl(
         val count = if (fadingEdges != null) chartDrawContext.saveLayer() else -1
 
         axisManager.drawBehindChart(chartDrawContext)
-        chart.drawScrollableContent(chartDrawContext, model, clickedChartItemIndex)
+        chart.drawScrollableContent(chartDrawContext, model)
 
         fadingEdges?.apply {
             applyFadingEdges(chartDrawContext, chart.bounds)
