@@ -8,8 +8,8 @@
 5. Rename *core-release.aar* to *vico-core.aar* and *compose-release.aar* to *vico-compose.aar*
 6. Move *vico-core.aar* and *vico-compose.aar* to root libs folder in your project.
 7. Navigate to the build/libs folder of both "compose" and "core", you could see a (core or compose)-...-sources.jar file take the latest
-8. Rename *core-...-.sources.jar* to *vico-core-sources.jar* and *compose-...-.sources.jar* to *vico-compose-sources.jar*
-9. Move *vico-core-sources.jar* and *vico-compose-sources.jar* to root libs folder in your project. 
+8. Rename *core-...-.sources.jar* to *vico-core-sources.jar* and *compose-...-.sources.jar* to *vico-compose-source.jar*
+9. Move *vico-core-sources.jar* and *vico-compose-source.jar* to root libs folder in your project.
 
 ![](https://img.shields.io/maven-central/v/com.patrykandpatrick.vico/core)
 ![](https://img.shields.io/github/actions/workflow/status/patrykandpatrick/vico/build-debug-apk.yml?branch=master)
