@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 by Patryk Goworowski and Patrick Michalik.
+ * Copyright 2024 by Patryk Goworowski and Patrick Michalik.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,6 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
                             maxY = yRange.endInclusive,
                             stackedPositiveY = aggregateYRange.endInclusive,
                             stackedNegativeY = aggregateYRange.start,
-                            xGcd = dataSet.calculateXGcd(),
                             extraStore = mergedExtraStore,
                         )
                     }
@@ -129,9 +128,6 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
                         maxY = models.maxOf { it.maxY },
                         stackedPositiveY = models.maxOf { it.stackedPositiveY },
                         stackedNegativeY = models.minOf { it.stackedNegativeY },
-                        xGcd = models.fold<ChartEntryModel, Float?>(null) { gcd, model ->
-                            gcd?.gcdWith(model.xGcd) ?: model.xGcd
-                        } ?: 1f,
                         id = models.map { it.id }.hashCode(),
                         extraStore = mergedExtraStore,
                     ).also { cachedInternalComposedModel = it }
@@ -140,12 +136,32 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
 
     override fun getModel(): ComposedChartEntryModel<ChartEntryModel>? = getInternalModel()
 
+    private suspend fun transformModel(
+        key: Any,
+        fraction: Float,
+        model: InternalComposedModel?,
+        chartValuesProvider: ChartValuesProvider,
+    ) {
+        with(updateReceivers[key] ?: return) {
+            modelTransformer?.transform(extraStore, fraction)
+            val mergedExtraStore = this@ComposedChartEntryModelProducer.extraStore + extraStore.copy()
+            val internalModel = model?.copy(
+                composedEntryCollections = model.composedEntryCollections
+                    .map { model -> model.copy(extraStore = mergedExtraStore) },
+                extraStore = mergedExtraStore,
+            )
+            currentCoroutineContext().ensureActive()
+            onModelCreated(internalModel, chartValuesProvider)
+        }
+    }
+
+    @Deprecated("Use the function passed to the `startAnimation` lambda of `registerForUpdates`.")
     override suspend fun transformModel(key: Any, fraction: Float) {
         with(updateReceivers[key] ?: return) {
             modelTransformer?.transform(extraStore, fraction)
             val internalModel = getInternalModel(extraStore.copy())
             currentCoroutineContext().ensureActive()
-            onModelCreated(internalModel)
+            onModelCreated(internalModel, updateChartValues(internalModel))
         }
     }
 
@@ -153,12 +169,12 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
     override fun registerForUpdates(
         key: Any,
         cancelAnimation: () -> Unit,
-        startAnimation: (transformModel: suspend (chartKey: Any, fraction: Float) -> Unit) -> Unit,
+        startAnimation: (transformModel: suspend (key: Any, fraction: Float) -> Unit) -> Unit,
         getOldModel: () -> ComposedChartEntryModel<ChartEntryModel>?,
         modelTransformerProvider: Chart.ModelTransformerProvider?,
         extraStore: MutableExtraStore,
         updateChartValues: (ComposedChartEntryModel<ChartEntryModel>?) -> ChartValuesProvider,
-        onModelCreated: (ComposedChartEntryModel<ChartEntryModel>?) -> Unit,
+        onModelCreated: (ComposedChartEntryModel<ChartEntryModel>?, ChartValuesProvider) -> Unit,
     ) {
         UpdateReceiver(
             cancelAnimation,
@@ -171,6 +187,30 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
         ).run {
             updateReceivers[key] = this
             handleUpdate()
+        }
+    }
+
+    @Deprecated("Use the overload in which `onModelCreated` has two parameters.")
+    override fun registerForUpdates(
+        key: Any,
+        cancelAnimation: () -> Unit,
+        startAnimation: (transformModel: suspend (chartKey: Any, fraction: Float) -> Unit) -> Unit,
+        getOldModel: () -> ComposedChartEntryModel<ChartEntryModel>?,
+        modelTransformerProvider: Chart.ModelTransformerProvider?,
+        extraStore: MutableExtraStore,
+        updateChartValues: (ComposedChartEntryModel<ChartEntryModel>?) -> ChartValuesProvider,
+        onModelCreated: (ComposedChartEntryModel<ChartEntryModel>?) -> Unit,
+    ) {
+        registerForUpdates(
+            key,
+            cancelAnimation,
+            startAnimation,
+            getOldModel,
+            modelTransformerProvider,
+            extraStore,
+            updateChartValues,
+        ) { model, _ ->
+            onModelCreated(model)
         }
     }
 
@@ -285,7 +325,7 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
     private inner class UpdateReceiver(
         val cancelAnimation: () -> Unit,
         val startAnimation: (transformModel: suspend (chartKey: Any, fraction: Float) -> Unit) -> Unit,
-        val onModelCreated: (ComposedChartEntryModel<ChartEntryModel>?) -> Unit,
+        val onModelCreated: (ComposedChartEntryModel<ChartEntryModel>?, ChartValuesProvider) -> Unit,
         val extraStore: MutableExtraStore,
         val modelTransformer: Chart.ModelTransformer<ComposedChartEntryModel<ChartEntryModel>>?,
         val getOldModel: () -> ComposedChartEntryModel<ChartEntryModel>?,
@@ -293,13 +333,15 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
     ) {
         fun handleUpdate() {
             cancelAnimation()
+            val model = getInternalModel()
+            val chartValuesProvider = updateChartValues(model)
             modelTransformer?.prepareForTransformation(
                 oldModel = getOldModel(),
-                newModel = getModel(),
+                newModel = model,
                 extraStore = extraStore,
-                chartValuesProvider = updateChartValues(getModel()),
+                chartValuesProvider = chartValuesProvider,
             )
-            startAnimation(::transformModel)
+            startAnimation { key, fraction -> transformModel(key, fraction, model, chartValuesProvider) }
         }
     }
 
@@ -311,9 +353,10 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
         override val maxY: Float,
         override val stackedPositiveY: Float,
         override val stackedNegativeY: Float,
-        override val xGcd: Float,
         override val extraStore: ExtraStore,
-    ) : ChartEntryModel
+    ) : ChartEntryModel {
+        override val xGcd: Float get() = entries.calculateXGcd()
+    }
 
     private data class InternalComposedModel(
         override val composedEntryCollections: List<InternalModel>,
@@ -324,10 +367,14 @@ public class ComposedChartEntryModelProducer private constructor(dispatcher: Cor
         override val maxY: Float,
         override val stackedPositiveY: Float,
         override val stackedNegativeY: Float,
-        override val xGcd: Float,
         override val id: Int,
         override val extraStore: ExtraStore,
-    ) : ComposedChartEntryModel<ChartEntryModel>
+    ) : ComposedChartEntryModel<ChartEntryModel> {
+        override val xGcd: Float
+            get() = composedEntryCollections
+                .fold<ChartEntryModel, Float?>(null) { gcd, model -> gcd?.gcdWith(model.xGcd) ?: model.xGcd }
+                ?: 1f
+    }
 
     public companion object {
         /**

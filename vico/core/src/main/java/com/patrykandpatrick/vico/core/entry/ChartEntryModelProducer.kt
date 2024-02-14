@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 by Patryk Goworowski and Patrick Michalik.
+ * Copyright 2024 by Patryk Goworowski and Patrick Michalik.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,7 +148,6 @@ public class ChartEntryModelProducer(
                         maxY = yRange.endInclusive,
                         stackedPositiveY = aggregateYRange.endInclusive,
                         stackedNegativeY = aggregateYRange.start,
-                        xGcd = series.calculateXGcd(),
                         id = series.hashCode(),
                         extraStore = mergedExtraStore,
                     ).also { cachedInternalModel = it }
@@ -157,12 +156,27 @@ public class ChartEntryModelProducer(
 
     override fun getModel(): ChartEntryModel? = getInternalModel()
 
+    private suspend fun transformModel(
+        key: Any,
+        fraction: Float,
+        model: InternalModel?,
+        chartValuesProvider: ChartValuesProvider,
+    ) {
+        with(updateReceivers[key] ?: return) {
+            modelTransformer?.transform(extraStore, fraction)
+            val internalModel = model?.copy(extraStore = this@ChartEntryModelProducer.extraStore + extraStore.copy())
+            currentCoroutineContext().ensureActive()
+            onModelCreated(internalModel, chartValuesProvider)
+        }
+    }
+
+    @Deprecated("Use the function passed to the `startAnimation` lambda of `registerForUpdates`.")
     override suspend fun transformModel(key: Any, fraction: Float) {
         with(updateReceivers[key] ?: return) {
             modelTransformer?.transform(extraStore, fraction)
             val internalModel = getInternalModel(extraStore.copy())
             currentCoroutineContext().ensureActive()
-            onModelCreated(internalModel)
+            onModelCreated(internalModel, updateChartValues(internalModel))
         }
     }
 
@@ -170,12 +184,12 @@ public class ChartEntryModelProducer(
     override fun registerForUpdates(
         key: Any,
         cancelAnimation: () -> Unit,
-        startAnimation: (transformModel: suspend (chartKey: Any, fraction: Float) -> Unit) -> Unit,
+        startAnimation: (transformModel: suspend (key: Any, fraction: Float) -> Unit) -> Unit,
         getOldModel: () -> ChartEntryModel?,
         modelTransformerProvider: Chart.ModelTransformerProvider?,
         extraStore: MutableExtraStore,
         updateChartValues: (ChartEntryModel?) -> ChartValuesProvider,
-        onModelCreated: (ChartEntryModel?) -> Unit,
+        onModelCreated: (ChartEntryModel?, ChartValuesProvider) -> Unit,
     ) {
         UpdateReceiver(
             cancelAnimation,
@@ -191,6 +205,31 @@ public class ChartEntryModelProducer(
         }
     }
 
+    @WorkerThread
+    @Deprecated("Use the overload in which `onModelCreated` has two parameters.")
+    override fun registerForUpdates(
+        key: Any,
+        cancelAnimation: () -> Unit,
+        startAnimation: (transformModel: suspend (chartKey: Any, fraction: Float) -> Unit) -> Unit,
+        getOldModel: () -> ChartEntryModel?,
+        modelTransformerProvider: Chart.ModelTransformerProvider?,
+        extraStore: MutableExtraStore,
+        updateChartValues: (ChartEntryModel?) -> ChartValuesProvider,
+        onModelCreated: (ChartEntryModel?) -> Unit,
+    ) {
+        registerForUpdates(
+            key,
+            cancelAnimation,
+            startAnimation,
+            getOldModel,
+            modelTransformerProvider,
+            extraStore,
+            updateChartValues,
+        ) { model, _ ->
+            onModelCreated(model)
+        }
+    }
+
     override fun unregisterFromUpdates(key: Any) {
         updateReceivers.remove(key)
     }
@@ -200,7 +239,7 @@ public class ChartEntryModelProducer(
     private inner class UpdateReceiver(
         val cancelAnimation: () -> Unit,
         val startAnimation: (transformModel: suspend (chartKey: Any, fraction: Float) -> Unit) -> Unit,
-        val onModelCreated: (ChartEntryModel?) -> Unit,
+        val onModelCreated: (ChartEntryModel?, ChartValuesProvider) -> Unit,
         val extraStore: MutableExtraStore,
         val modelTransformer: Chart.ModelTransformer<ChartEntryModel>?,
         val getOldModel: () -> ChartEntryModel?,
@@ -208,13 +247,15 @@ public class ChartEntryModelProducer(
     ) {
         fun handleUpdate() {
             cancelAnimation()
+            val model = getInternalModel()
+            val chartValuesProvider = updateChartValues(model)
             modelTransformer?.prepareForTransformation(
                 oldModel = getOldModel(),
-                newModel = getModel(),
+                newModel = model,
                 extraStore = extraStore,
-                chartValuesProvider = updateChartValues(getModel()),
+                chartValuesProvider = chartValuesProvider,
             )
-            startAnimation(::transformModel)
+            startAnimation { key, fraction -> transformModel(key, fraction, model, chartValuesProvider) }
         }
     }
 
@@ -226,8 +267,9 @@ public class ChartEntryModelProducer(
         override val maxY: Float,
         override val stackedPositiveY: Float,
         override val stackedNegativeY: Float,
-        override val xGcd: Float,
         override val id: Int,
         override val extraStore: ExtraStore,
-    ) : ChartEntryModel
+    ) : ChartEntryModel {
+        override val xGcd: Float get() = entries.calculateXGcd()
+    }
 }
