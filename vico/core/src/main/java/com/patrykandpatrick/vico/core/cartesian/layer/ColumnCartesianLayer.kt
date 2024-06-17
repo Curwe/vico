@@ -125,10 +125,15 @@ public open class ColumnCartesianLayer(
       drawingStart = getDrawingStart(index, model.series.size, mergeMode) - horizontalScroll
 
       entryCollection.forEachIn(chartValues.minX..chartValues.maxX) { entry, _ ->
-        val columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)
+        var columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)
+        columnInfo = columnInfo ?: drawingModel?.getOrNull(index)?.get(chartValues.minX)
+
         height = (columnInfo?.height ?: (abs(entry.y) / yRange.length)) * bounds.height()
         val xSpacingMultiplier = chartValues.getXSpacingMultiplier(entry.x)
-        val column = columnProvider.getColumn(entry, index, model.extraStore)
+        val column =  if (entry is ColumnCartesianLayerModel.ColoredEntry) {
+          entry.lineComponent
+        } else columnProvider.getColumn(entry, index, model.extraStore)
+
         columnCenterX =
           drawingStart +
             (horizontalDimensions.xSpacing * xSpacingMultiplier +

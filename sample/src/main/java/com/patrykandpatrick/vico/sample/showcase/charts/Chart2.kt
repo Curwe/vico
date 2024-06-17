@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidViewBinding
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
@@ -40,6 +41,7 @@ import com.patrykandpatrick.vico.core.cartesian.axis.AxisItemPlacer
 import com.patrykandpatrick.vico.core.cartesian.axis.BaseAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
@@ -69,7 +71,22 @@ internal fun Chart2(uiFramework: UIFramework, modifier: Modifier) {
         modelProducer.tryRunTransaction {
           /* Learn more:
           https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/column-layer#data. */
-          columnSeries { series(List(47) { 2 + Random.nextFloat() * 18 }) }
+          //columnSeries { series(List(47) { 2 + Random.nextFloat() * 18 }) }
+          columnSeries {
+            seriesColored(
+                List(47) {
+                    ColumnCartesianLayerModel.ColoredEntry(
+                        x = it,
+                        y = 2 + Random.nextFloat() * 18,
+                        lineComponent = LineComponent(
+                            color = if (Random.nextBoolean()) Color(0xffff5500).toArgb() else Color(0xffcccc55).toArgb(),
+                            thicknessDp = 16f,
+                            shape = Shape.rounded(allPercent = 40),
+                        ),
+                    )
+                },
+            )
+          }
         }
         delay(Defaults.TRANSACTION_INTERVAL_MS)
       }
@@ -85,27 +102,27 @@ internal fun Chart2(uiFramework: UIFramework, modifier: Modifier) {
 private fun ComposeChart2(modelProducer: CartesianChartModelProducer, modifier: Modifier) {
   CartesianChartHost(
     chart =
-      rememberCartesianChart(
-        rememberColumnCartesianLayer(
+    rememberCartesianChart(
+      rememberColumnCartesianLayer(
           ColumnCartesianLayer.ColumnProvider.series(
-            rememberLineComponent(
-              color = Color(0xffff5500),
-              thickness = 16.dp,
-              shape = remember { Shape.rounded(allPercent = 40) },
-            )
-          )
-        ),
-        startAxis = rememberStartAxis(),
-        bottomAxis =
-          rememberBottomAxis(
-            valueFormatter = bottomAxisValueFormatter,
-            itemPlacer =
-              remember {
-                AxisItemPlacer.Horizontal.default(spacing = 3, addExtremeLabelPadding = true)
-              },
+              rememberLineComponent(
+                  color = Color(0xffff5500),
+                  thickness = 16.dp,
+                  shape = remember { Shape.rounded(allPercent = 40) },
+              ),
           ),
-        decorations = listOf(rememberComposeHorizontalLine()),
       ),
+      startAxis = rememberStartAxis(),
+      bottomAxis =
+      rememberBottomAxis(
+        valueFormatter = bottomAxisValueFormatter,
+        itemPlacer =
+        remember {
+          AxisItemPlacer.Horizontal.default(spacing = 3, addExtremeLabelPadding = true)
+        },
+      ),
+      decorations = listOf(rememberComposeHorizontalLine()),
+    ),
     modelProducer = modelProducer,
     modifier = modifier,
     marker = rememberMarker(),
@@ -138,16 +155,16 @@ private fun rememberComposeHorizontalLine(): HorizontalLine {
     y = { HORIZONTAL_LINE_Y },
     line = rememberLineComponent(color, HORIZONTAL_LINE_THICKNESS_DP.dp),
     labelComponent =
-      rememberTextComponent(
-        background = rememberShapeComponent(Shape.Pill, color),
-        padding =
-          Dimensions.of(
-            HORIZONTAL_LINE_LABEL_HORIZONTAL_PADDING_DP.dp,
-            HORIZONTAL_LINE_LABEL_VERTICAL_PADDING_DP.dp,
-          ),
-        margins = Dimensions.of(HORIZONTAL_LINE_LABEL_MARGIN_DP.dp),
-        typeface = Typeface.MONOSPACE,
+    rememberTextComponent(
+      background = rememberShapeComponent(Shape.Pill, color),
+      padding =
+      Dimensions.of(
+        HORIZONTAL_LINE_LABEL_HORIZONTAL_PADDING_DP.dp,
+        HORIZONTAL_LINE_LABEL_VERTICAL_PADDING_DP.dp,
       ),
+      margins = Dimensions.of(HORIZONTAL_LINE_LABEL_MARGIN_DP.dp),
+      typeface = Typeface.MONOSPACE,
+    ),
   )
 }
 
@@ -156,16 +173,16 @@ private fun getViewHorizontalLine() =
     y = { HORIZONTAL_LINE_Y },
     line = LineComponent(HORIZONTAL_LINE_COLOR, HORIZONTAL_LINE_THICKNESS_DP),
     labelComponent =
-      TextComponent.build {
-        background = ShapeComponent(Shape.Pill, HORIZONTAL_LINE_COLOR)
-        padding =
-          Dimensions(
-            HORIZONTAL_LINE_LABEL_HORIZONTAL_PADDING_DP,
-            HORIZONTAL_LINE_LABEL_VERTICAL_PADDING_DP,
-          )
-        margins = Dimensions(HORIZONTAL_LINE_LABEL_MARGIN_DP)
-        typeface = Typeface.MONOSPACE
-      },
+    TextComponent.build {
+      background = ShapeComponent(Shape.Pill, HORIZONTAL_LINE_COLOR)
+      padding =
+        Dimensions(
+          HORIZONTAL_LINE_LABEL_HORIZONTAL_PADDING_DP,
+          HORIZONTAL_LINE_LABEL_VERTICAL_PADDING_DP,
+        )
+      margins = Dimensions(HORIZONTAL_LINE_LABEL_MARGIN_DP)
+      typeface = Typeface.MONOSPACE
+    },
   )
 
 private const val HORIZONTAL_LINE_Y = 14f

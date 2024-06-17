@@ -17,6 +17,7 @@
 package com.patrykandpatrick.vico.core.cartesian.data
 
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.rangeOf
 import com.patrykandpatrick.vico.core.common.rangeOfPair
@@ -135,8 +136,23 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
     return result
   }
 
+  /** Represents a column of height [y] at [x]. And the color of the component */
+  public class ColoredEntry internal constructor(
+    override val x: Float,
+    public override val y: Float,
+    public val lineComponent: LineComponent
+  ) : Entry(x, y) {
+    public constructor(x: Number, y: Number, lineComponent: LineComponent) :
+      this(x.toFloat(), y.toFloat(), lineComponent)
+
+    override fun equals(other: Any?): Boolean =
+      this === other || other is Entry && x == other.x && y == other.y
+
+    override fun hashCode(): Int = 31 * x.hashCode() + y.hashCode()
+  }
+
   /** Represents a column of height [y] at [x]. */
-  public class Entry internal constructor(override val x: Float, public val y: Float) :
+  public open class Entry internal constructor(override val x: Float, public open val y: Float) :
     CartesianLayerModel.Entry {
     public constructor(x: Number, y: Number) : this(x.toFloat(), y.toFloat())
 
@@ -180,6 +196,19 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
     /** Adds a series with the provided _y_ values ([y]), using their indices as the _x_ values. */
     public fun series(vararg y: Number) {
       series(y.toList())
+    }
+
+    /**
+     * Adds a series with the provided _x_ values ([x]) and _y_ values ([y]). [x] and [y] should
+     * have the same size.
+     */
+    public fun seriesColored(x: Collection<Number>, y: Collection<ColoredEntry>) {
+      series.add(x.zip(y) { index, entry -> ColoredEntry(index.toFloat(), entry.y, entry.lineComponent) })
+    }
+
+    /** Adds a series with the provided _y_ values ([y]), using their indices as the _x_ values. */
+    public fun seriesColored(y: Collection<ColoredEntry>) {
+      seriesColored(y.indices.toList(), y)
     }
   }
 
