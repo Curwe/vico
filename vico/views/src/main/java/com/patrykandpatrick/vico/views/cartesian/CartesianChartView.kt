@@ -69,12 +69,14 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
   override val measureContext: MutableCartesianMeasureContext =
     MutableCartesianMeasureContext(
-      canvasBounds = contentBounds,
+      canvasBounds = canvasBounds,
       density = context.density,
       isLtr = context.isLtr,
       scrollEnabled = false,
-      spToPx = context::spToPx,
+      zoomEnabled = false,
+      horizontalLayout = HorizontalLayout.Segmented,
       chartValues = ChartValues.Empty,
+      spToPx = context::spToPx,
     )
 
   private val scaleGestureListener: ScaleGestureDetector.OnScaleGestureListener =
@@ -102,13 +104,16 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
       newValue.postInvalidate = ::postInvalidate
       newValue.postInvalidateOnAnimation = ::postInvalidateOnAnimation
       measureContext.scrollEnabled = newValue.scrollEnabled
+      measureContext.zoomEnabled = measureContext.zoomEnabled && newValue.scrollEnabled
     }
 
   /** Houses information on the [CartesianChart]’s zoom factor. Allows for zoom customization. */
   public var zoomHandler: ZoomHandler by
     invalidatingObservable(
       ZoomHandler.default(themeHandler.isChartZoomEnabled, scrollHandler.scrollEnabled)
-    )
+    ) { _, newValue ->
+      measureContext.zoomEnabled = newValue.zoomEnabled && measureContext.scrollEnabled
+    }
 
   private val motionEventHandler =
     MotionEventHandler(
@@ -318,7 +323,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     withChartAndModel { chart, model ->
       measureContext.reset()
       horizontalDimensions.clear()
-      chart.prepare(measureContext, model, horizontalDimensions, contentBounds, marker)
+      chart.prepare(measureContext, model, horizontalDimensions, canvasBounds, marker)
 
       if (chart.bounds.isEmpty) return@withChartAndModel
 
@@ -339,7 +344,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
           markerTouchPoint = markerTouchPoint,
           horizontalDimensions = horizontalDimensions,
           chartBounds = chart.bounds,
-          horizontalScroll = scrollHandler.value,
+          scroll = scrollHandler.value,
           zoom = zoomHandler.value,
         )
 

@@ -122,7 +122,7 @@ public open class ColumnCartesianLayer(
     val mergeMode = mergeMode(model.extraStore)
 
     model.series.forEachIndexed { index, entryCollection ->
-      drawingStart = getDrawingStart(index, model.series.size, mergeMode) - horizontalScroll
+      drawingStart = getDrawingStart(index, model.series.size, mergeMode) - scroll
 
       entryCollection.forEachIn(chartValues.minX..chartValues.maxX) { entry, _ ->
         var columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)

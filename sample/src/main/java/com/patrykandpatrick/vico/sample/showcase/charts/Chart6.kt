@@ -59,11 +59,11 @@ import kotlinx.coroutines.withContext
 
 @Composable
 internal fun Chart6(uiFramework: UIFramework, modifier: Modifier) {
-  val modelProducer = remember { CartesianChartModelProducer.build() }
+  val modelProducer = remember { CartesianChartModelProducer() }
   LaunchedEffect(Unit) {
     withContext(Dispatchers.Default) {
       while (isActive) {
-        modelProducer.tryRunTransaction {
+        modelProducer.runTransaction {
           /* Learn more:
           https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/column-layer#data. */
           columnSeries {

@@ -78,13 +78,11 @@ public open class HorizontalAxis<Position : AxisPosition.Horizontal>(
 
       val textY = if (position.isBottom) tickMarkBottom else tickMarkTop
       val baseCanvasX =
-        bounds.getStart(isLtr) - horizontalScroll +
+        bounds.getStart(isLtr) - scroll +
           horizontalDimensions.startPadding * layoutDirectionMultiplier
       val firstVisibleX =
         fullXRange.start +
-          horizontalScroll / horizontalDimensions.xSpacing *
-            chartValues.xStep *
-            layoutDirectionMultiplier
+          scroll / horizontalDimensions.xSpacing * chartValues.xStep * layoutDirectionMultiplier
       val lastVisibleX =
         firstVisibleX + bounds.width() / horizontalDimensions.xSpacing * chartValues.xStep
       val visibleXRange = firstVisibleX..lastVisibleX
@@ -248,15 +246,20 @@ public open class HorizontalAxis<Position : AxisPosition.Horizontal>(
           chartValues = chartValues,
           verticalAxisPosition = null,
         )
-      label
-        .getWidth(
-          context = context,
-          text = text,
-          rotationDegrees = labelRotationDegrees,
-          pad = true,
-        )
-        .half
-        .let { horizontalDimensions.ensureValuesAtLeast(unscalableStartPadding = it) }
+      var unscalableStartPadding =
+        label
+          .getWidth(
+            context = context,
+            text = text,
+            rotationDegrees = labelRotationDegrees,
+            pad = true,
+          )
+          .half
+      if (!context.zoomEnabled) {
+        unscalableStartPadding -=
+          (firstLabelValue - chartValues.minX) * horizontalDimensions.xSpacing
+      }
+      horizontalDimensions.ensureValuesAtLeast(unscalableStartPadding = unscalableStartPadding)
     }
     if (lastLabelValue != null) {
       val text =
@@ -265,45 +268,47 @@ public open class HorizontalAxis<Position : AxisPosition.Horizontal>(
           chartValues = chartValues,
           verticalAxisPosition = null,
         )
-      label
-        .getWidth(
-          context = context,
-          text = text,
-          rotationDegrees = labelRotationDegrees,
-          pad = true,
-        )
-        .half
-        .let { horizontalDimensions.ensureValuesAtLeast(unscalableEndPadding = it) }
+      var unscalableEndPadding =
+        label
+          .getWidth(
+            context = context,
+            text = text,
+            rotationDegrees = labelRotationDegrees,
+            pad = true,
+          )
+          .half
+      if (!context.zoomEnabled) {
+        unscalableEndPadding -= (chartValues.maxX - lastLabelValue) * horizontalDimensions.xSpacing
+      }
+      horizontalDimensions.ensureValuesAtLeast(unscalableEndPadding = unscalableEndPadding)
     }
   }
 
-  override fun getInsets(
+  override fun updateInsets(
     context: CartesianMeasureContext,
-    outInsets: Insets,
     horizontalDimensions: HorizontalDimensions,
+    insets: Insets,
   ) {
     val maxLabelWidth =
       context.getMaxLabelWidth(horizontalDimensions, context.getFullXRange(horizontalDimensions))
-    with(outInsets) {
-      start =
-        itemPlacer.getStartHorizontalAxisInset(
-          context,
-          horizontalDimensions,
-          context.tickThickness,
-          maxLabelWidth,
-        )
-      end =
-        itemPlacer.getEndHorizontalAxisInset(
-          context,
-          horizontalDimensions,
-          context.tickThickness,
-          maxLabelWidth,
-        )
-      top =
-        if (position.isTop) getDesiredHeight(context, horizontalDimensions, maxLabelWidth) else 0f
-      bottom =
-        if (position.isBottom) getDesiredHeight(context, horizontalDimensions, maxLabelWidth)
-        else 0f
+    val height = getHeight(context, horizontalDimensions, maxLabelWidth)
+    insets.ensureValuesAtLeast(
+      itemPlacer.getStartHorizontalAxisInset(
+        context,
+        horizontalDimensions,
+        context.tickThickness,
+        maxLabelWidth,
+      ),
+      itemPlacer.getEndHorizontalAxisInset(
+        context,
+        horizontalDimensions,
+        context.tickThickness,
+        maxLabelWidth,
+      ),
+    )
+    when {
+      position.isTop -> insets.ensureValuesAtLeast(top = height)
+      position.isBottom -> insets.ensureValuesAtLeast(bottom = height)
     }
   }
 
@@ -316,7 +321,7 @@ public open class HorizontalAxis<Position : AxisPosition.Horizontal>(
       start..end
     }
 
-  protected open fun getDesiredHeight(
+  protected open fun getHeight(
     context: CartesianMeasureContext,
     horizontalDimensions: HorizontalDimensions,
     maxLabelWidth: Float,

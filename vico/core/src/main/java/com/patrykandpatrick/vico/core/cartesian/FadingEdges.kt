@@ -89,13 +89,13 @@ public open class FadingEdges(
    *   edges.
    * @param bounds the bounds within which the fading edges will be drawn.
    */
-  public fun applyFadingEdges(context: CartesianDrawContext, bounds: RectF): Unit =
+  public fun draw(context: CartesianDrawContext, bounds: RectF): Unit =
     with(context) {
       val maxScroll = getMaxScrollDistance()
       var fadeAlphaFraction: Float
 
-      if (scrollEnabled && startEdgeWidthDp > 0f && horizontalScroll > 0f) {
-        fadeAlphaFraction = (horizontalScroll / visibilityThresholdDp.pixels).coerceAtMost(1f)
+      if (scrollEnabled && startEdgeWidthDp > 0f && scroll > 0f) {
+        fadeAlphaFraction = (scroll / visibilityThresholdDp.pixels).coerceAtMost(1f)
 
         drawFadingEdge(
           left = bounds.left,
@@ -107,9 +107,8 @@ public open class FadingEdges(
         )
       }
 
-      if (scrollEnabled && endEdgeWidthDp > 0f && horizontalScroll < maxScroll) {
-        fadeAlphaFraction =
-          ((maxScroll - horizontalScroll) / visibilityThresholdDp.pixels).coerceAtMost(1f)
+      if (scrollEnabled && endEdgeWidthDp > 0f && scroll < maxScroll) {
+        fadeAlphaFraction = ((maxScroll - scroll) / visibilityThresholdDp.pixels).coerceAtMost(1f)
 
         drawFadingEdge(
           left = bounds.right - endEdgeWidthDp.pixels,
@@ -121,6 +120,17 @@ public open class FadingEdges(
         )
       }
     }
+
+  /**
+   * Applies fading edges inside of the given [bounds] accordingly to the scroll state.
+   *
+   * @param context the drawing context that holds the information necessary to draw the fading
+   *   edges.
+   * @param bounds the bounds within which the fading edges will be drawn.
+   */
+  @Deprecated(message = "Use `draw`.", replaceWith = ReplaceWith("draw(context, bounds)"))
+  public fun applyFadingEdges(context: CartesianDrawContext, bounds: RectF): Unit =
+    draw(context, bounds)
 
   private fun CartesianDrawContext.drawFadingEdge(
     left: Float,

@@ -42,11 +42,11 @@ import kotlinx.coroutines.withContext
 
 @Composable
 internal fun Chart10(uiFramework: UIFramework, modifier: Modifier) {
-  val modelProducer = remember { CartesianChartModelProducer.build() }
+  val modelProducer = remember { CartesianChartModelProducer() }
   LaunchedEffect(key1 = Unit) {
     withContext(Dispatchers.Default) {
       while (isActive) {
-        modelProducer.tryRunTransaction {
+        modelProducer.runTransaction {
           /* Learn more:
           https://patrykandpatrick.com/vico/wiki/cartesian-charts/layers/candlestick-layer#data. */
           add(RandomCartesianModelGenerator.getRandomCandlestickLayerModelPartial())
