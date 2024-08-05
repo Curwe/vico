@@ -22,38 +22,39 @@ import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
 import com.patrykandpatrick.vico.core.cartesian.HorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.Insets
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModel
 import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.VerticalPosition
 import com.patrykandpatrick.vico.core.common.averageOf
-import com.patrykandpatrick.vico.core.common.ceil
 import com.patrykandpatrick.vico.core.common.component.Component
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.component.ShapeComponent
 import com.patrykandpatrick.vico.core.common.component.TextComponent
+import com.patrykandpatrick.vico.core.common.data.CacheStore
 import com.patrykandpatrick.vico.core.common.doubled
 import com.patrykandpatrick.vico.core.common.half
 import com.patrykandpatrick.vico.core.common.orZero
 import com.patrykandpatrick.vico.core.common.shape.MarkerCorneredShape
+import kotlin.math.ceil
+import kotlin.math.min
 
 /**
  * The default [CartesianMarker] implementation.
  *
- * @param label the [TextComponent] for the label.
- * @param valueFormatter formats the values.
- * @param labelPosition specifies the position of the label.
- * @param indicator drawn at the marked points.
- * @param indicatorSizeDp the indicator size (in dp).
- * @param setIndicatorColor sets the indicator color for each marked point.
- * @param guideline drawn vertically through the marked points.
+ * @property label the [TextComponent] for the label.
+ * @property valueFormatter formats the values.
+ * @property labelPosition specifies the position of the label.
+ * @property indicator returns a [Component] to be drawn at points with the given color.
+ * @property indicatorSizeDp the indicator size (in dp).
+ * @property guideline drawn vertically through the marked points.
  */
 public open class DefaultCartesianMarker(
   protected val label: TextComponent,
   protected val valueFormatter: CartesianMarkerValueFormatter =
     DefaultCartesianMarkerValueFormatter(),
   protected val labelPosition: LabelPosition = LabelPosition.Top,
-  protected val indicator: Component? = null,
+  protected val indicator: ((Int) -> Component)? = null,
   protected val indicatorSizeDp: Float = Defaults.MARKER_INDICATOR_SIZE,
-  protected val setIndicatorColor: ((Int) -> Unit)? = null,
   protected val guideline: LineComponent? = null,
 ) : CartesianMarker {
   protected val tempBounds: RectF = RectF()
@@ -116,15 +117,16 @@ public open class DefaultCartesianMarker(
     color: Int,
     halfIndicatorSize: Float,
   ) {
-    if (indicator == null) return
-    setIndicatorColor?.invoke(color)
-    indicator.draw(
-      this,
-      x - halfIndicatorSize,
-      y - halfIndicatorSize,
-      x + halfIndicatorSize,
-      y + halfIndicatorSize,
-    )
+    val indicator = indicator ?: return
+    cacheStore
+      .getOrSet(keyNamespace, indicator, color) { indicator.invoke(color) }
+      .draw(
+        this,
+        x - halfIndicatorSize,
+        y - halfIndicatorSize,
+        x + halfIndicatorSize,
+        y + halfIndicatorSize,
+      )
   }
 
   protected fun drawLabel(
@@ -135,14 +137,14 @@ public open class DefaultCartesianMarker(
       val text = valueFormatter.format(context, targets)
       val targetX = targets.averageOf { it.canvasX }
       val labelBounds =
-        label.getTextBounds(
+        label.getBounds(
           context = context,
           text = text,
-          width = chartBounds.width().toInt(),
+          maxWidth = layerBounds.width().toInt(),
           outRect = tempBounds,
         )
       val halfOfTextWidth = labelBounds.width().half
-      val x = overrideXPositionToFit(targetX, chartBounds, halfOfTextWidth)
+      val x = overrideXPositionToFit(targetX, layerBounds, halfOfTextWidth)
       markerCorneredShape?.tickX = targetX
       val tickPosition: MarkerCorneredShape.TickPosition
       val y: Float
@@ -150,12 +152,12 @@ public open class DefaultCartesianMarker(
       when (labelPosition) {
         LabelPosition.Top -> {
           tickPosition = MarkerCorneredShape.TickPosition.Bottom
-          y = context.chartBounds.top - tickSizeDp.pixels
+          y = context.layerBounds.top - tickSizeDp.pixels
           verticalPosition = VerticalPosition.Top
         }
         LabelPosition.Bottom -> {
           tickPosition = MarkerCorneredShape.TickPosition.Top
-          y = context.chartBounds.bottom + tickSizeDp.pixels
+          y = context.layerBounds.bottom + tickSizeDp.pixels
           verticalPosition = VerticalPosition.Bottom
         }
         LabelPosition.AroundPoint,
@@ -173,7 +175,7 @@ public open class DefaultCartesianMarker(
             }
           val flip =
             labelPosition == LabelPosition.AroundPoint &&
-              topPointY - labelBounds.height() - tickSizeDp.pixels < context.chartBounds.top
+              topPointY - labelBounds.height() - tickSizeDp.pixels < context.layerBounds.top
           tickPosition =
             if (flip) MarkerCorneredShape.TickPosition.Top
             else MarkerCorneredShape.TickPosition.Bottom
@@ -183,13 +185,13 @@ public open class DefaultCartesianMarker(
       }
       markerCorneredShape?.tickPosition = tickPosition
 
-      label.drawText(
+      label.draw(
         context = context,
         text = text,
-        textX = x,
-        textY = y,
+        x = x,
+        y = y,
         verticalPosition = verticalPosition,
-        maxTextWidth = minOf(chartBounds.right - x, x - chartBounds.left).doubled.ceil.toInt(),
+        maxWidth = ceil(min(layerBounds.right - x, x - layerBounds.left).doubled).toInt(),
       )
     }
 
@@ -208,12 +210,13 @@ public open class DefaultCartesianMarker(
     targets
       .map { it.canvasX }
       .toSet()
-      .forEach { x -> guideline?.drawVertical(this, chartBounds.top, chartBounds.bottom, x) }
+      .forEach { x -> guideline?.drawVertical(this, layerBounds.top, layerBounds.bottom, x) }
   }
 
   override fun updateInsets(
     context: CartesianMeasureContext,
     horizontalDimensions: HorizontalDimensions,
+    model: CartesianChartModel,
     insets: Insets,
   ) {
     with(context) {
@@ -246,5 +249,9 @@ public open class DefaultCartesianMarker(
      * [CartesianChart].
      */
     AbovePoint,
+  }
+
+  protected companion object {
+    public val keyNamespace: CacheStore.KeyNamespace = CacheStore.KeyNamespace()
   }
 }

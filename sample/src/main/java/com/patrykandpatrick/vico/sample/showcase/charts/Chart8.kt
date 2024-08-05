@@ -28,20 +28,19 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberEndAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineSpec
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
-import com.patrykandpatrick.vico.compose.common.shader.color
-import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
+import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.BaseAxis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.shader.DynamicShader
 import com.patrykandpatrick.vico.core.common.shape.Shape
 import com.patrykandpatrick.vico.databinding.Chart8Binding
 import com.patrykandpatrick.vico.sample.showcase.Defaults
@@ -100,20 +99,22 @@ private fun ComposeChart8(modelProducer: CartesianChartModelProducer, modifier: 
               }
             ),
           mergeMode = { ColumnCartesianLayer.MergeMode.Stacked },
-          verticalAxisPosition = AxisPosition.Vertical.Start,
+          verticalAxisPosition = Axis.Position.Vertical.Start,
         ),
         rememberLineCartesianLayer(
-          lines = listOf(rememberLineSpec(shader = DynamicShader.color(color4))),
-          verticalAxisPosition = AxisPosition.Vertical.End,
+          lineProvider =
+            LineCartesianLayer.LineProvider.series(
+              rememberLine(remember { LineCartesianLayer.LineFill.single(fill(color4)) })
+            ),
+          verticalAxisPosition = Axis.Position.Vertical.End,
         ),
         startAxis = rememberStartAxis(guideline = null),
         endAxis = rememberEndAxis(guideline = null),
         bottomAxis = rememberBottomAxis(),
+        marker = rememberMarker(),
       ),
     modelProducer = modelProducer,
     modifier = modifier,
-    marker = rememberMarker(),
-    runInitialAnimation = false,
     zoomState = rememberVicoZoomState(zoomEnabled = false),
   )
 }
@@ -124,12 +125,12 @@ private fun ViewChart8(modelProducer: CartesianChartModelProducer, modifier: Mod
   AndroidViewBinding(Chart8Binding::inflate, modifier) {
     with(chartView) {
       (chart?.layers?.get(0) as ColumnCartesianLayer).verticalAxisPosition =
-        AxisPosition.Vertical.Start
-      (chart?.layers?.get(1) as LineCartesianLayer).verticalAxisPosition = AxisPosition.Vertical.End
-      runInitialAnimation = false
+        Axis.Position.Vertical.Start
+      (chart?.layers?.get(1) as LineCartesianLayer).verticalAxisPosition =
+        Axis.Position.Vertical.End
       this.modelProducer = modelProducer
       (chart?.startAxis as BaseAxis).guideline = null
-      this.marker = marker
+      chart?.marker = marker
     }
   }
 }

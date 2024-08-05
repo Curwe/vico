@@ -19,7 +19,6 @@ package com.patrykandpatrick.vico.core.common
 import android.graphics.Canvas
 import android.graphics.RectF
 import androidx.annotation.RestrictTo
-import com.patrykandpatrick.vico.core.common.component.ShapeComponent
 import com.patrykandpatrick.vico.core.common.data.CacheStore
 import com.patrykandpatrick.vico.core.common.data.MutableExtraStore
 
@@ -28,9 +27,6 @@ import com.patrykandpatrick.vico.core.common.data.MutableExtraStore
  * also defines helpful drawing functions.
  */
 public interface DrawContext : MeasureContext {
-  /** The elevation overlay color, applied to [ShapeComponent]s that cast shadows. */
-  public val elevationOverlayColor: Long
-
   /** The canvas to draw the chart on. */
   public val canvas: Canvas
 
@@ -41,8 +37,11 @@ public interface DrawContext : MeasureContext {
    */
   public fun saveCanvas(): Int = canvas.save()
 
-  /** Temporarily swaps the [Canvas] and yields [DrawContext] as the [block]’s receiver. */
-  public fun withOtherCanvas(canvas: Canvas, block: (DrawContext) -> Unit)
+  /**
+   * Updates the value of [DrawContext.canvas] to [canvas], runs [block], and restores the previous
+   * [DrawContext.canvas] value.
+   */
+  public fun withOtherCanvas(canvas: Canvas, block: () -> Unit)
 
   /**
    * Clips the [Canvas] to the specified rectangle.
@@ -99,14 +98,11 @@ public fun drawContext(
   canvas: Canvas,
   density: Float = 1f,
   isLtr: Boolean = true,
-  elevationOverlayColor: Long = DefaultColors.Light.elevationOverlayColor,
   canvasBounds: RectF = RectF(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat()),
   spToPx: (Float) -> Float = { it },
 ): DrawContext =
   object : DrawContext {
     override val canvasBounds: RectF = canvasBounds
-
-    override val elevationOverlayColor: Long = elevationOverlayColor
 
     override var canvas: Canvas = canvas
 
@@ -122,10 +118,10 @@ public fun drawContext(
 
     override val cacheStore: CacheStore = CacheStore()
 
-    override fun withOtherCanvas(canvas: Canvas, block: (DrawContext) -> Unit) {
+    override fun withOtherCanvas(canvas: Canvas, block: () -> Unit) {
       val originalCanvas = this.canvas
       this.canvas = canvas
-      block(this)
+      block()
       this.canvas = originalCanvas
     }
 

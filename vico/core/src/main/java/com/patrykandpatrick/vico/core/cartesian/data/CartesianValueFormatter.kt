@@ -16,7 +16,8 @@
 
 package com.patrykandpatrick.vico.core.cartesian.data
 
-import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
+import com.patrykandpatrick.vico.core.cartesian.CartesianChart
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
 import java.text.DecimalFormat
 
@@ -28,18 +29,18 @@ public fun interface CartesianValueFormatter {
    * is associated. Pass this to [ChartValues.getYRange].
    */
   public fun format(
-    value: Float,
+    value: Double,
     chartValues: ChartValues,
-    verticalAxisPosition: AxisPosition.Vertical?,
+    verticalAxisPosition: Axis.Position.Vertical?,
   ): CharSequence
 
   /** Houses [CartesianValueFormatter] factory functions. */
   public companion object {
     private class Decimal(private val decimalFormat: DecimalFormat) : CartesianValueFormatter {
       override fun format(
-        value: Float,
+        value: Double,
         chartValues: ChartValues,
-        verticalAxisPosition: AxisPosition.Vertical?,
+        verticalAxisPosition: Axis.Position.Vertical?,
       ): CharSequence = decimalFormat.format(value)
 
       override fun equals(other: Any?) =
@@ -50,9 +51,9 @@ public fun interface CartesianValueFormatter {
 
     private class YPercent(private val decimalFormat: DecimalFormat) : CartesianValueFormatter {
       override fun format(
-        value: Float,
+        value: Double,
         chartValues: ChartValues,
-        verticalAxisPosition: AxisPosition.Vertical?,
+        verticalAxisPosition: Axis.Position.Vertical?,
       ): CharSequence =
         decimalFormat.format(value / chartValues.getYRange(verticalAxisPosition).maxY)
 
