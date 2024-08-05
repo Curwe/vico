@@ -18,7 +18,7 @@ package com.patrykandpatrick.vico.compose.cartesian.decoration
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import com.patrykandpatrick.vico.core.cartesian.axis.AxisPosition
+import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.core.common.HorizontalPosition
 import com.patrykandpatrick.vico.core.common.VerticalPosition
@@ -29,14 +29,14 @@ import com.patrykandpatrick.vico.core.common.data.ExtraStore
 /** Creates and remembers a [HorizontalLine]. */
 @Composable
 public fun rememberHorizontalLine(
-  y: (ExtraStore) -> Float,
+  y: (ExtraStore) -> Double,
   line: LineComponent,
   labelComponent: TextComponent? = null,
   label: (ExtraStore) -> CharSequence = { HorizontalLine.getLabel(y(it)) },
   horizontalLabelPosition: HorizontalPosition = HorizontalPosition.Start,
   verticalLabelPosition: VerticalPosition = VerticalPosition.Top,
   labelRotationDegrees: Float = 0f,
-  verticalAxisPosition: AxisPosition.Vertical? = null,
+  verticalAxisPosition: Axis.Position.Vertical? = null,
 ): HorizontalLine =
   remember(
     y,

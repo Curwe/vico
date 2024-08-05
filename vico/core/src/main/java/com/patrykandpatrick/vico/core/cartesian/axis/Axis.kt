@@ -22,32 +22,21 @@ import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
 import com.patrykandpatrick.vico.core.cartesian.ChartInsetter
 import com.patrykandpatrick.vico.core.cartesian.MutableHorizontalDimensions
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModel
+import com.patrykandpatrick.vico.core.cartesian.layer.CartesianLayer
 import com.patrykandpatrick.vico.core.common.Bounded
+import com.patrykandpatrick.vico.core.common.MeasureContext
 
-/**
- * Defines the minimal set of properties and functions required by other parts of the library to
- * draw an axis.
- */
-public interface Axis<Position : AxisPosition> : Bounded, ChartInsetter {
-  /** Defines the position of the axis relative to the [CartesianChart]. */
-  public val position: Position
+/** Draws an axis. */
+public interface Axis<P : Axis.Position> : Bounded, ChartInsetter<CartesianChartModel> {
+  /** The position of the [Axis]. */
+  public val position: P
 
-  /**
-   * Called before the [CartesianChart] is drawn. Implementations should rely on this function to
-   * draw themselves, unless they need to draw something above the [CartesianChart].
-   *
-   * @param context holds the information needed to draw the axis.
-   * @see drawAboveChart
-   */
-  public fun drawBehindChart(context: CartesianDrawContext)
+  /** Draws content under the [CartesianLayer]s. */
+  public fun drawUnderLayers(context: CartesianDrawContext)
 
-  /**
-   * Called after the [CartesianChart] is drawn. Implementations can use this function to draw
-   * content above the [CartesianChart].
-   *
-   * @param context holds the information needed to draw the axis.
-   */
-  public fun drawAboveChart(context: CartesianDrawContext)
+  /** Draws content over the [CartesianLayer]s. */
+  public fun drawOverLayers(context: CartesianDrawContext)
 
   /** The bounds ([RectF]) passed here define the area where the [Axis] shouldn’t draw anything. */
   public fun setRestrictedBounds(vararg bounds: RectF?)
@@ -57,4 +46,31 @@ public interface Axis<Position : AxisPosition> : Bounded, ChartInsetter {
     context: CartesianMeasureContext,
     horizontalDimensions: MutableHorizontalDimensions,
   )
+
+  /** Specifies the position of an [Axis]. */
+  public sealed interface Position {
+    /** Specifies the position of a horizontal [Axis]. */
+    public sealed interface Horizontal : Position {
+      /** Denotes that a horizontal [Axis] is at the top of its [CartesianChart]. */
+      public data object Top : Horizontal
+
+      /** Denotes that a horizontal [Axis] is at the bottom of its [CartesianChart]. */
+      public data object Bottom : Horizontal
+    }
+
+    /** Specifies the position of a vertical [Axis]. */
+    public sealed interface Vertical : Position {
+      /** Denotes that a vertical [Axis] is at the start of its [CartesianChart]. */
+      public data object Start : Vertical
+
+      /** Denotes that a vertical [Axis] is at the end of its [CartesianChart]. */
+      public data object End : Vertical
+    }
+  }
 }
+
+internal fun Axis.Position.Vertical.isLeft(context: MeasureContext) =
+  when (this) {
+    Axis.Position.Vertical.Start -> context.isLtr
+    Axis.Position.Vertical.End -> !context.isLtr
+  }

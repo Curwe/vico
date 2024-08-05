@@ -16,7 +16,7 @@
 
 package com.patrykandpatrick.vico.core.cartesian.data
 
-import androidx.annotation.WorkerThread
+import androidx.annotation.RestrictTo
 import com.patrykandpatrick.vico.core.cartesian.CartesianChart
 import com.patrykandpatrick.vico.core.cartesian.layer.CartesianLayer
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
@@ -32,6 +32,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** Creates [CartesianChartModel]s and handles difference animations. */
 public class CartesianChartModelProducer private constructor(dispatcher: CoroutineDispatcher) {
@@ -71,22 +72,27 @@ public class CartesianChartModelProducer private constructor(dispatcher: Corouti
     partials: List<CartesianLayerModel.Partial>,
     extraStore: MutableExtraStore,
   ) {
-    updateMutex.lock()
-    registrationMutex.lock()
-    val immutablePartials = partials.toList()
-    if (immutablePartials == this.partials && extraStore == this.extraStore) {
+    withContext(Dispatchers.Default) {
+      updateMutex.lock()
+      registrationMutex.lock()
+      val immutablePartials = partials.toList()
+      if (
+        immutablePartials == this@CartesianChartModelProducer.partials &&
+          extraStore == this@CartesianChartModelProducer.extraStore
+      ) {
+        updateMutex.unlock()
+        registrationMutex.unlock()
+        return@withContext
+      }
+      this@CartesianChartModelProducer.partials = partials.toList()
+      this@CartesianChartModelProducer.extraStore = extraStore
+      cachedModel = null
+      coroutineScope {
+        updateReceivers.values.forEach { launch { it.handleUpdate() } }
+        registrationMutex.unlock()
+      }
       updateMutex.unlock()
-      registrationMutex.unlock()
-      return
     }
-    this.partials = partials.toList()
-    this.extraStore = extraStore
-    cachedModel = null
-    coroutineScope {
-      updateReceivers.values.forEach { launch { it.handleUpdate() } }
-      registrationMutex.unlock()
-    }
-    updateMutex.unlock()
   }
 
   private fun getModel(extraStore: ExtraStore) =
@@ -106,24 +112,18 @@ public class CartesianChartModelProducer private constructor(dispatcher: Corouti
     chartValues: ChartValues,
   ) {
     with(updateReceivers[key] ?: return) {
-      transform(extraStore, fraction)
-      val transformedModel =
-        model?.copy(this@CartesianChartModelProducer.extraStore + extraStore.copy())
-      currentCoroutineContext().ensureActive()
-      onModelCreated(transformedModel, chartValues)
+      withContext(Dispatchers.Default) {
+        transform(extraStore, fraction)
+        val transformedModel =
+          model?.copy(this@CartesianChartModelProducer.extraStore + extraStore.copy())
+        currentCoroutineContext().ensureActive()
+        onModelCreated(transformedModel, chartValues)
+      }
     }
   }
 
-  /**
-   * Registers an update listener associated with a [key]. [cancelAnimation] and [startAnimation]
-   * are called after a data update is requested, with [cancelAnimation] being called before the
-   * update starts being processed (at which point [transformModel] should stop being used), and
-   * [startAnimation] being called once the update has been processed (at which point it’s safe to
-   * use [transformModel]). [updateChartValues] updates the chart’s [MutableChartValues] instance
-   * and returns an immutable copy of it. [onModelCreated] is called when a new
-   * [CartesianChartModel] has been generated.
-   */
-  @WorkerThread
+  /** @suppress */
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
   public suspend fun registerForUpdates(
     key: Any,
     cancelAnimation: suspend () -> Unit,
@@ -134,26 +134,30 @@ public class CartesianChartModelProducer private constructor(dispatcher: Corouti
     updateChartValues: (CartesianChartModel?) -> ChartValues,
     onModelCreated: (CartesianChartModel?, ChartValues) -> Unit,
   ) {
-    val receiver =
-      UpdateReceiver(
-        cancelAnimation,
-        startAnimation,
-        onModelCreated,
-        extraStore,
-        prepareForTransformation,
-        transform,
-        updateChartValues,
-      )
-    registrationMutex.withLock {
-      updateReceivers[key] = receiver
-      receiver.handleUpdate()
+    withContext(Dispatchers.Default) {
+      val receiver =
+        UpdateReceiver(
+          cancelAnimation,
+          startAnimation,
+          onModelCreated,
+          extraStore,
+          prepareForTransformation,
+          transform,
+          updateChartValues,
+        )
+      registrationMutex.withLock {
+        updateReceivers[key] = receiver
+        receiver.handleUpdate()
+      }
     }
   }
 
-  /** Checks if an update listener with the given key is registered. */
+  /** @suppress */
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
   public fun isRegistered(key: Any): Boolean = updateReceivers.containsKey(key)
 
-  /** Unregisters the update listener associated with the given key. */
+  /** @suppress */
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
   public fun unregisterFromUpdates(key: Any) {
     updateReceivers.remove(key)
   }

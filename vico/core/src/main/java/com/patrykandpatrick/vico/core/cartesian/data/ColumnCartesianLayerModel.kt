@@ -31,19 +31,19 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
 
   override val id: Int
 
-  override val minX: Float
+  override val minX: Double
 
-  override val maxX: Float
+  override val maxX: Double
 
-  override val minY: Float
+  override val minY: Double
 
-  override val maxY: Float
+  override val maxY: Double
 
   /** The minimum sum of all _y_ values associated with a given _x_ value. */
-  public val minAggregateY: Float
+  public val minAggregateY: Double
 
   /** The maximum sum of all _y_ values associated with a given _x_ value. */
-  public val maxAggregateY: Float
+  public val maxAggregateY: Double
 
   override val extraStore: ExtraStore
 
@@ -58,7 +58,7 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
       }
     this.entries = this.series.flatten()
     val xRange = this.series.rangeOfPair { it.first().x to it.last().x }
-    val yRange = entries.rangeOf { it.y }
+    val yRange = entries.rangeOf { it.y.toDouble() }
     val aggregateYRange = entries.getAggregateYRange()
     this.id = this.series.hashCode()
     this.minX = xRange.start
@@ -74,12 +74,12 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
     entries: List<Entry>,
     series: List<List<Entry>>,
     id: Int,
-    minX: Float,
-    maxX: Float,
-    minY: Float,
-    maxY: Float,
-    minAggregateY: Float,
-    maxAggregateY: Float,
+    minX: Double,
+    maxX: Double,
+    minY: Double,
+    maxY: Double,
+    minAggregateY: Double,
+    maxAggregateY: Double,
     extraStore: ExtraStore,
   ) {
     this.entries = entries
@@ -94,7 +94,7 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
     this.extraStore = extraStore
   }
 
-  override fun getXDeltaGcd(): Float = entries.getXDeltaGcd()
+  override fun getXDeltaGcd(): Double = entries.getXDeltaGcd()
 
   override fun copy(extraStore: ExtraStore): CartesianLayerModel =
     ColumnCartesianLayerModel(
@@ -138,12 +138,12 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
 
   /** Represents a column of height [y] at [x]. And the color of the component */
   public class ColoredEntry internal constructor(
-    override val x: Float,
-    public override val y: Float,
+    override val x: Double,
+    public override val y: Double,
     public val lineComponent: LineComponent
   ) : Entry(x, y) {
     public constructor(x: Number, y: Number, lineComponent: LineComponent) :
-      this(x.toFloat(), y.toFloat(), lineComponent)
+      this(x.toDouble(), y.toDouble(), lineComponent)
 
     override fun equals(other: Any?): Boolean =
       this === other || other is Entry && x == other.x && y == other.y
@@ -152,9 +152,9 @@ public class ColumnCartesianLayerModel : CartesianLayerModel {
   }
 
   /** Represents a column of height [y] at [x]. */
-  public open class Entry internal constructor(override val x: Float, public open val y: Float) :
+  public open class Entry internal constructor(override val x: Double, public open val y: Double) :
     CartesianLayerModel.Entry {
-    public constructor(x: Number, y: Number) : this(x.toFloat(), y.toFloat())
+    public constructor(x: Number, y: Number) : this(x.toDouble(), y.toDouble())
 
     override fun equals(other: Any?): Boolean =
       this === other || other is Entry && x == other.x && y == other.y
@@ -234,8 +234,8 @@ public fun CartesianChartModelProducer.Transaction.columnSeries(
 }
 
 internal fun Iterable<ColumnCartesianLayerModel.Entry>.getAggregateYRange() =
-  fold(mutableMapOf<Float, Pair<Float, Float>>()) { map, entry ->
-      val (negativeY, positiveY) = map.getOrElse(entry.x) { 0f to 0f }
+  fold(mutableMapOf<Double, Pair<Double, Double>>()) { map, entry ->
+      val (negativeY, positiveY) = map.getOrElse(entry.x) { 0.0 to 0.0 }
       map[entry.x] =
         if (entry.y < 0f) negativeY + entry.y to positiveY else negativeY to positiveY + entry.y
       map
