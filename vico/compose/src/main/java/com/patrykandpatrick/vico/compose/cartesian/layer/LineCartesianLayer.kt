@@ -44,7 +44,7 @@ public fun rememberLineCartesianLayer(
     LineCartesianLayer.LineProvider.series(
       vicoTheme.lineCartesianLayerColors.map { color ->
         rememberLine(LineCartesianLayer.LineFill.single(fill(color)))
-      }
+      },
     ),
   pointSpacing: Dp = Defaults.POINT_SPACING.dp,
   axisValueOverrider: AxisValueOverrider = remember { AxisValueOverrider.auto() },
