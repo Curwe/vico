@@ -17,12 +17,13 @@
 package com.patrykandpatrick.vico.core.cartesian.layer
 
 import androidx.annotation.RestrictTo
-import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
-import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
+import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.MutableHorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CandlestickCartesianLayerDrawingModel
 import com.patrykandpatrick.vico.core.cartesian.data.CandlestickCartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.data.CandlestickCartesianLayerModel.Entry.Change
@@ -34,8 +35,7 @@ import com.patrykandpatrick.vico.core.cartesian.marker.CandlestickCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.component.LineComponent
-import com.patrykandpatrick.vico.core.common.data.DefaultDrawingModelInterpolator
-import com.patrykandpatrick.vico.core.common.data.DrawingModelInterpolator
+import com.patrykandpatrick.vico.core.common.data.CartesianLayerDrawingModelInterpolator
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.data.MutableExtraStore
 import com.patrykandpatrick.vico.core.common.getStart
@@ -50,6 +50,7 @@ import kotlin.math.max
  * @property minCandleBodyHeightDp the minimum height of the candle bodies (in dp).
  * @property candleSpacingDp the spacing between neighboring candles.
  * @property scaleCandleWicks whether the candle wicks should be scaled based on the zoom factor.
+ * @property axisValueOverrider overrides the _x_ and _y_ ranges.
  * @property verticalAxisPosition the position of the [VerticalAxis] with which the
  *   [CandlestickCartesianLayer] should be associated. Use this for independent [CartesianLayer]
  *   scaling.
@@ -59,13 +60,14 @@ public open class CandlestickCartesianLayer(
   public var minCandleBodyHeightDp: Float = Defaults.MIN_CANDLE_BODY_HEIGHT_DP,
   public var candleSpacingDp: Float = Defaults.CANDLE_SPACING_DP,
   public var scaleCandleWicks: Boolean = false,
+  public var axisValueOverrider: AxisValueOverrider = AxisValueOverrider.auto(),
   public var verticalAxisPosition: Axis.Position.Vertical? = null,
   public var drawingModelInterpolator:
-    DrawingModelInterpolator<
+    CartesianLayerDrawingModelInterpolator<
       CandlestickCartesianLayerDrawingModel.CandleInfo,
       CandlestickCartesianLayerDrawingModel,
     > =
-    DefaultDrawingModelInterpolator(),
+    CartesianLayerDrawingModelInterpolator.default(),
 ) : BaseCartesianLayer<CandlestickCartesianLayerModel>() {
   /**
    * Defines a candle style.
@@ -99,7 +101,7 @@ public open class CandlestickCartesianLayer(
   override val markerTargets: Map<Double, List<CartesianMarker.Target>> = _markerTargets
 
   override fun drawInternal(
-    context: CartesianDrawContext,
+    context: CartesianDrawingContext,
     model: CandlestickCartesianLayerModel,
   ): Unit =
     with(context) {
@@ -111,7 +113,7 @@ public open class CandlestickCartesianLayer(
       )
     }
 
-  private fun CartesianDrawContext.drawChartInternal(
+  private fun CartesianDrawingContext.drawChartInternal(
     chartValues: ChartValues,
     model: CandlestickCartesianLayerModel,
     drawingModel: CandlestickCartesianLayerDrawingModel?,
@@ -188,7 +190,7 @@ public open class CandlestickCartesianLayer(
     }
   }
 
-  protected open fun CartesianDrawContext.updateMarkerTargets(
+  protected open fun CartesianDrawingContext.updateMarkerTargets(
     entry: CandlestickCartesianLayerModel.Entry,
     canvasX: Float,
     bodyBottomCanvasY: Float,
@@ -236,7 +238,7 @@ public open class CandlestickCartesianLayer(
   }
 
   override fun updateHorizontalDimensions(
-    context: CartesianMeasureContext,
+    context: CartesianMeasuringContext,
     horizontalDimensions: MutableHorizontalDimensions,
     model: CandlestickCartesianLayerModel,
   ) {

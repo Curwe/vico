@@ -31,8 +31,7 @@ import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer.Merge
 import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.VerticalPosition
 import com.patrykandpatrick.vico.core.common.component.TextComponent
-import com.patrykandpatrick.vico.core.common.data.DefaultDrawingModelInterpolator
-import com.patrykandpatrick.vico.core.common.data.DrawingModelInterpolator
+import com.patrykandpatrick.vico.core.common.data.CartesianLayerDrawingModelInterpolator
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.shape.Shape
 
@@ -51,19 +50,19 @@ public fun rememberColumnCartesianLayer(
     ),
   columnCollectionSpacing: Dp = Defaults.COLUMN_COLLECTION_SPACING.dp,
   mergeMode: (ExtraStore) -> MergeMode = { MergeMode.grouped() },
-  verticalAxisPosition: Axis.Position.Vertical? = null,
   dataLabel: TextComponent? = null,
   dataLabelVerticalPosition: VerticalPosition = VerticalPosition.Top,
   dataLabelValueFormatter: CartesianValueFormatter = remember { CartesianValueFormatter.decimal() },
   dataLabelRotationDegrees: Float = 0f,
   axisValueOverrider: AxisValueOverrider = remember { AxisValueOverrider.auto() },
+  verticalAxisPosition: Axis.Position.Vertical? = null,
   drawingModelInterpolator:
-    DrawingModelInterpolator<
+    CartesianLayerDrawingModelInterpolator<
       ColumnCartesianLayerDrawingModel.ColumnInfo,
       ColumnCartesianLayerDrawingModel,
     > =
     remember {
-      DefaultDrawingModelInterpolator()
+      CartesianLayerDrawingModelInterpolator.default()
     },
 ): ColumnCartesianLayer =
   remember { ColumnCartesianLayer(columnProvider) }

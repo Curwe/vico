@@ -17,12 +17,13 @@
 package com.patrykandpatrick.vico.core.cartesian.layer
 
 import androidx.compose.runtime.Immutable
-import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
-import com.patrykandpatrick.vico.core.cartesian.CartesianMeasureContext
+import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.MutableHorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.ChartValues
 import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerDrawingModel
@@ -36,8 +37,7 @@ import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.VerticalPosition
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.component.TextComponent
-import com.patrykandpatrick.vico.core.common.data.DefaultDrawingModelInterpolator
-import com.patrykandpatrick.vico.core.common.data.DrawingModelInterpolator
+import com.patrykandpatrick.vico.core.common.data.CartesianLayerDrawingModelInterpolator
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.data.MutableExtraStore
 import com.patrykandpatrick.vico.core.common.doubled
@@ -45,6 +45,7 @@ import com.patrykandpatrick.vico.core.common.getRepeating
 import com.patrykandpatrick.vico.core.common.getStart
 import com.patrykandpatrick.vico.core.common.half
 import com.patrykandpatrick.vico.core.common.inBounds
+import com.patrykandpatrick.vico.core.common.saveLayer
 import com.patrykandpatrick.vico.core.common.unaryMinus
 import kotlin.math.abs
 import kotlin.math.min
@@ -55,13 +56,14 @@ import kotlin.math.min
  * @property columnProvider provides the column [LineComponent]s.
  * @property columnCollectionSpacingDp the spacing between neighboring column collections (in dp).
  * @property mergeMode defines how columns should be drawn in column collections.
- * @property verticalAxisPosition the position of the [VerticalAxis] with which the
- *   [ColumnCartesianLayer] should be associated. Use this for independent [CartesianLayer] scaling.
  * @property dataLabel the [TextComponent] for the data labels. Use `null` for no data labels.
  * @property dataLabelVerticalPosition the vertical position of each data label relative to its
  *   column’s top edge.
  * @property dataLabelValueFormatter the [CartesianValueFormatter] for the data labels.
  * @property dataLabelRotationDegrees the rotation of the data labels (in degrees).
+ * @property axisValueOverrider overrides the _x_ and _y_ ranges.
+ * @property verticalAxisPosition the position of the [VerticalAxis] with which the
+ *   [ColumnCartesianLayer] should be associated. Use this for independent [CartesianLayer] scaling.
  * @property drawingModelInterpolator interpolates the [ColumnCartesianLayer]’s
  *   [ColumnCartesianLayerDrawingModel]s.
  */
@@ -69,17 +71,18 @@ public open class ColumnCartesianLayer(
   public var columnProvider: ColumnProvider,
   public var columnCollectionSpacingDp: Float = Defaults.COLUMN_COLLECTION_SPACING,
   public var mergeMode: (ExtraStore) -> MergeMode = { MergeMode.Grouped() },
-  public var verticalAxisPosition: Axis.Position.Vertical? = null,
   public var dataLabel: TextComponent? = null,
   public var dataLabelVerticalPosition: VerticalPosition = VerticalPosition.Top,
   public var dataLabelValueFormatter: CartesianValueFormatter = CartesianValueFormatter.decimal(),
   public var dataLabelRotationDegrees: Float = 0f,
+  public var axisValueOverrider: AxisValueOverrider = AxisValueOverrider.auto(),
+  public var verticalAxisPosition: Axis.Position.Vertical? = null,
   public var drawingModelInterpolator:
-    DrawingModelInterpolator<
+    CartesianLayerDrawingModelInterpolator<
       ColumnCartesianLayerDrawingModel.ColumnInfo,
       ColumnCartesianLayerDrawingModel,
     > =
-    DefaultDrawingModelInterpolator(),
+    CartesianLayerDrawingModelInterpolator.default(),
 ) : BaseCartesianLayer<ColumnCartesianLayerModel>() {
   private val _markerTargets =
     mutableMapOf<Double, MutableList<MutableColumnCartesianLayerMarkerTarget>>()
@@ -93,7 +96,7 @@ public open class ColumnCartesianLayer(
 
   override val markerTargets: Map<Double, List<CartesianMarker.Target>> = _markerTargets
 
-  override fun drawInternal(context: CartesianDrawContext, model: ColumnCartesianLayerModel): Unit =
+  override fun drawInternal(context: CartesianDrawingContext, model: ColumnCartesianLayerModel) {
     with(context) {
       _markerTargets.clear()
       drawChartInternal(
@@ -103,8 +106,9 @@ public open class ColumnCartesianLayer(
       )
       stackInfo.clear()
     }
+  }
 
-  protected open fun CartesianDrawContext.drawChartInternal(
+  protected open fun CartesianDrawingContext.drawChartInternal(
     chartValues: ChartValues,
     model: ColumnCartesianLayerModel,
     drawingModel: ColumnCartesianLayerDrawingModel?,
@@ -120,6 +124,8 @@ public open class ColumnCartesianLayer(
     val zeroLinePosition =
       layerBounds.bottom + (yRange.minY / yRange.length).toFloat() * layerBounds.height()
     val mergeMode = mergeMode(model.extraStore)
+
+    canvas.saveLayer(opacity = drawingModel?.opacity ?: 1f)
 
     model.series.forEachIndexed { index, entryCollection ->
       drawingStart = getDrawingStart(index, model.series.size, mergeMode) - scroll
@@ -170,14 +176,7 @@ public open class ColumnCartesianLayer(
           )
         ) {
           updateMarkerTargets(entry, columnCenterX, columnSignificantY, column, mergeMode)
-          column.drawVertical(
-            this,
-            columnTop,
-            columnBottom,
-            columnCenterX,
-            zoom,
-            drawingModel?.opacity ?: 1f,
-          )
+          column.drawVertical(this, columnTop, columnBottom, columnCenterX, zoom)
         }
 
         if (mergeMode is MergeMode.Grouped) {
@@ -206,9 +205,11 @@ public open class ColumnCartesianLayer(
         }
       }
     }
+
+    canvas.restore()
   }
 
-  protected open fun CartesianDrawContext.drawStackedDataLabel(
+  protected open fun CartesianDrawingContext.drawStackedDataLabel(
     modelEntriesSize: Int,
     columnThicknessDp: Float,
     stackInfo: StackInfo,
@@ -245,7 +246,7 @@ public open class ColumnCartesianLayer(
     }
   }
 
-  protected open fun CartesianDrawContext.drawDataLabel(
+  protected open fun CartesianDrawingContext.drawDataLabel(
     modelEntriesSize: Int,
     columnThicknessDp: Float,
     dataLabelValue: Double,
@@ -316,7 +317,7 @@ public open class ColumnCartesianLayer(
     }
   }
 
-  protected open fun CartesianDrawContext.updateMarkerTargets(
+  protected open fun CartesianDrawingContext.updateMarkerTargets(
     entry: ColumnCartesianLayerModel.Entry,
     canvasX: Float,
     canvasY: Float,
@@ -366,7 +367,7 @@ public open class ColumnCartesianLayer(
   }
 
   override fun updateHorizontalDimensions(
-    context: CartesianMeasureContext,
+    context: CartesianMeasuringContext,
     horizontalDimensions: MutableHorizontalDimensions,
     model: ColumnCartesianLayerModel,
   ) {
@@ -395,7 +396,7 @@ public open class ColumnCartesianLayer(
     }
   }
 
-  protected open fun CartesianMeasureContext.getColumnCollectionWidth(
+  protected open fun CartesianMeasuringContext.getColumnCollectionWidth(
     entryCollectionSize: Int,
     mergeMode: MergeMode,
   ): Float =
@@ -413,7 +414,7 @@ public open class ColumnCartesianLayer(
           mergeMode.columnSpacingDp.pixels * (entryCollectionSize - 1)
     }
 
-  protected open fun CartesianDrawContext.getDrawingStart(
+  protected open fun CartesianDrawingContext.getDrawingStart(
     entryCollectionIndex: Int,
     entryCollectionCount: Int,
     mergeMode: MergeMode,
@@ -431,7 +432,7 @@ public open class ColumnCartesianLayer(
           zoom) * layoutDirectionMultiplier
   }
 
-  protected open fun CartesianMeasureContext.getCumulatedThickness(count: Int): Float {
+  protected open fun CartesianMeasuringContext.getCumulatedThickness(count: Int): Float {
     var thickness = 0f
     for (seriesIndex in 0..<count) {
       thickness +=

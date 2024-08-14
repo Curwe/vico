@@ -37,6 +37,7 @@ import com.patrykandpatrick.vico.core.common.Point
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 import com.patrykandpatrick.vico.core.common.data.MutableExtraStore
 import com.patrykandpatrick.vico.core.common.orZero
+import com.patrykandpatrick.vico.core.common.saveLayer
 import java.util.Objects
 import java.util.SortedMap
 import kotlin.collections.component1
@@ -72,7 +73,7 @@ public open class CartesianChart(
   public var marker: CartesianMarker? = null,
   public var markerVisibilityListener: CartesianMarkerVisibilityListener? = null,
   public var horizontalLayout: HorizontalLayout = HorizontalLayout.Segmented,
-  public var legend: Legend<CartesianMeasureContext, CartesianDrawContext>? = null,
+  public var legend: Legend<CartesianMeasuringContext, CartesianDrawingContext>? = null,
   public var fadingEdges: FadingEdges? = null,
   public var decorations: List<Decoration> = emptyList(),
   public var persistentMarkers: (PersistentMarkerScope.(ExtraStore) -> Unit)? = null,
@@ -90,7 +91,7 @@ public open class CartesianChart(
 
   private val drawingModelAndLayerConsumer =
     object : ModelAndLayerConsumer {
-      lateinit var context: CartesianDrawContext
+      lateinit var context: CartesianDrawingContext
 
       override fun <T : CartesianLayerModel> invoke(model: T?, layer: CartesianLayer<T>) {
         layer.draw(context, model ?: return)
@@ -102,7 +103,7 @@ public open class CartesianChart(
 
   private val horizontalDimensionUpdateModelAndLayerConsumer =
     object : ModelAndLayerConsumer {
-      lateinit var context: CartesianMeasureContext
+      lateinit var context: CartesianMeasuringContext
       lateinit var horizontalDimensions: MutableHorizontalDimensions
 
       override fun <T : CartesianLayerModel> invoke(model: T?, layer: CartesianLayer<T>) {
@@ -121,7 +122,7 @@ public open class CartesianChart(
 
   private val insetUpdateModelAndLayerConsumer =
     object : ModelAndLayerConsumer {
-      lateinit var context: CartesianMeasureContext
+      lateinit var context: CartesianMeasuringContext
       lateinit var horizontalDimensions: HorizontalDimensions
       lateinit var insets: Insets
 
@@ -132,7 +133,7 @@ public open class CartesianChart(
 
   private val horizontalInsetUpdateModelAndLayerConsumer =
     object : ModelAndLayerConsumer {
-      lateinit var context: CartesianMeasureContext
+      lateinit var context: CartesianMeasuringContext
       var freeHeight: Float = 0f
       lateinit var insets: HorizontalInsets
 
@@ -187,7 +188,7 @@ public open class CartesianChart(
 
   /** Prepares the [CartesianChart] for drawing. */
   public fun prepare(
-    context: CartesianMeasureContext,
+    context: CartesianMeasuringContext,
     model: CartesianChartModel,
     horizontalDimensions: MutableHorizontalDimensions,
     canvasBounds: RectF,
@@ -237,17 +238,17 @@ public open class CartesianChart(
 
   /** Draws the [CartesianChart]. */
   public fun draw(
-    context: CartesianDrawContext,
+    context: CartesianDrawingContext,
     model: CartesianChartModel,
     pointerPosition: Point?,
   ) {
-    val canvasSaveCount = if (fadingEdges != null) context.saveLayer() else -1
+    val canvasSaveCount = if (fadingEdges != null) context.canvas.saveLayer() else -1
     axisManager.drawUnderLayers(context)
     decorations.forEach { it.drawUnderLayers(context) }
     model.forEachWithLayer(drawingModelAndLayerConsumer.apply { this.context = context })
     fadingEdges?.run {
       draw(context)
-      context.restoreCanvasToCount(canvasSaveCount)
+      context.canvas.restoreToCount(canvasSaveCount)
     }
     axisManager.drawOverLayers(context)
     decorations.forEach { it.drawOverLayers(context) }
@@ -267,7 +268,7 @@ public open class CartesianChart(
   }
 
   override fun updateInsets(
-    context: CartesianMeasureContext,
+    context: CartesianMeasuringContext,
     horizontalDimensions: HorizontalDimensions,
     model: CartesianChartModel,
     insets: Insets,
@@ -282,7 +283,7 @@ public open class CartesianChart(
   }
 
   override fun updateHorizontalInsets(
-    context: CartesianMeasureContext,
+    context: CartesianMeasuringContext,
     freeHeight: Float,
     model: CartesianChartModel,
     insets: HorizontalInsets,
@@ -327,7 +328,7 @@ public open class CartesianChart(
     }
   }
 
-  protected open fun drawMarker(context: CartesianDrawContext, pointerPosition: Point?) {
+  protected open fun drawMarker(context: CartesianDrawingContext, pointerPosition: Point?) {
     val marker = marker ?: return
     if (pointerPosition == null || markerTargets.isEmpty()) {
       if (previousMarkerTargetHashCode != null) markerVisibilityListener?.onHidden(marker)

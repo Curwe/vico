@@ -16,10 +16,9 @@
 
 package com.patrykandpatrick.vico.core.cartesian.layer
 
-import com.patrykandpatrick.vico.core.cartesian.CartesianDrawContext
+import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.core.cartesian.Insets
 import com.patrykandpatrick.vico.core.cartesian.MutableHorizontalDimensions
-import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerModel
 import com.patrykandpatrick.vico.core.cartesian.data.ChartValues
 import com.patrykandpatrick.vico.core.common.half
@@ -29,10 +28,7 @@ import com.patrykandpatrick.vico.core.common.inClip
 public abstract class BaseCartesianLayer<T : CartesianLayerModel> : CartesianLayer<T> {
   private val insets: Insets = Insets()
 
-  /** Overrides the _x_ and _y_ ranges. */
-  public var axisValueOverrider: AxisValueOverrider = AxisValueOverrider.auto()
-
-  protected abstract fun drawInternal(context: CartesianDrawContext, model: T)
+  protected abstract fun drawInternal(context: CartesianDrawingContext, model: T)
 
   protected fun MutableHorizontalDimensions.ensureSegmentedValues(
     xSpacing: Float,
@@ -46,7 +42,7 @@ public abstract class BaseCartesianLayer<T : CartesianLayerModel> : CartesianLay
     )
   }
 
-  override fun draw(context: CartesianDrawContext, model: T) {
+  override fun draw(context: CartesianDrawingContext, model: T) {
     with(context) {
       insets.clear()
       updateInsets(this, horizontalDimensions, model, insets)
