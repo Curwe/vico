@@ -21,10 +21,11 @@ import kotlin.math.max
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
-/** The default [DrawingModelInterpolator] implementation. */
 @Suppress("UNCHECKED_CAST")
-public class DefaultDrawingModelInterpolator<T : DrawingModel.DrawingInfo, R : DrawingModel<T>> :
-  DrawingModelInterpolator<T, R> {
+internal class DefaultCartesianLayerDrawingModelInterpolator<
+  T : CartesianLayerDrawingModel.DrawingInfo,
+  R : CartesianLayerDrawingModel<T>,
+> : CartesianLayerDrawingModelInterpolator<T, R> {
   private var transformationMaps = emptyList<Map<Double, TransformationModel<T>>>()
   private var oldDrawingModel: R? = null
   private var newDrawingModel: R? = null
@@ -68,7 +69,10 @@ public class DefaultDrawingModelInterpolator<T : DrawingModel.DrawingInfo, R : D
     }
   }
 
-  private class TransformationModel<T : DrawingModel.DrawingInfo>(val old: T?, val new: T? = null) {
+  private class TransformationModel<T : CartesianLayerDrawingModel.DrawingInfo>(
+    val old: T?,
+    val new: T? = null,
+  ) {
     fun transform(fraction: Float): T? = new?.transform(old, fraction) as T?
   }
 }

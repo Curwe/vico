@@ -18,7 +18,7 @@ package com.patrykandpatrick.vico.core.cartesian.axis
 
 import android.graphics.RectF
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.common.MeasureContext
+import com.patrykandpatrick.vico.core.common.MeasuringContext
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.component.TextComponent
 import com.patrykandpatrick.vico.core.common.orZero
@@ -39,31 +39,31 @@ import com.patrykandpatrick.vico.core.common.setAll
  * @property title the title text.
  */
 public abstract class BaseAxis<P : Axis.Position>(
-  public var line: LineComponent?,
-  public var label: TextComponent?,
-  public var labelRotationDegrees: Float,
-  public var valueFormatter: CartesianValueFormatter,
-  public var tick: LineComponent?,
-  public var tickLengthDp: Float,
-  public var guideline: LineComponent?,
-  public var sizeConstraint: SizeConstraint,
-  public var titleComponent: TextComponent?,
-  public var title: CharSequence?,
+  protected val line: LineComponent?,
+  protected val label: TextComponent?,
+  protected val labelRotationDegrees: Float,
+  protected val valueFormatter: CartesianValueFormatter,
+  protected val tick: LineComponent?,
+  protected val tickLengthDp: Float,
+  protected val guideline: LineComponent?,
+  protected val sizeConstraint: SizeConstraint,
+  protected val titleComponent: TextComponent?,
+  protected val title: CharSequence?,
 ) : Axis<P> {
   private val restrictedBounds: MutableList<RectF> = mutableListOf()
 
   override val bounds: RectF = RectF()
 
-  protected val MeasureContext.lineThickness: Float
+  protected val MeasuringContext.lineThickness: Float
     get() = line?.thicknessDp.orZero.pixels
 
-  protected val MeasureContext.tickThickness: Float
+  protected val MeasuringContext.tickThickness: Float
     get() = tick?.thicknessDp.orZero.pixels
 
-  protected val MeasureContext.guidelineThickness: Float
+  protected val MeasuringContext.guidelineThickness: Float
     get() = guideline?.thicknessDp.orZero.pixels
 
-  protected val MeasureContext.tickLength: Float
+  protected val MeasuringContext.tickLength: Float
     get() = if (tick != null) tickLengthDp.pixels else 0f
 
   override fun setRestrictedBounds(vararg bounds: RectF?) {
