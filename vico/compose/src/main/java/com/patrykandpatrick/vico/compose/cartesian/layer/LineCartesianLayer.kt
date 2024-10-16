@@ -25,16 +25,19 @@ import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.common.fill
 import com.patrykandpatrick.vico.compose.common.vicoTheme
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
-import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.LineCartesianLayerDrawingModel
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.layer.getDefaultAreaFill
 import com.patrykandpatrick.vico.core.common.Defaults
+import com.patrykandpatrick.vico.core.common.ValueWrapper
 import com.patrykandpatrick.vico.core.common.VerticalPosition
 import com.patrykandpatrick.vico.core.common.component.Component
 import com.patrykandpatrick.vico.core.common.component.TextComponent
 import com.patrykandpatrick.vico.core.common.data.CartesianLayerDrawingModelInterpolator
+import com.patrykandpatrick.vico.core.common.getValue
+import com.patrykandpatrick.vico.core.common.setValue
 
 /** Creates and remembers a [LineCartesianLayer]. */
 @Composable
@@ -42,11 +45,11 @@ public fun rememberLineCartesianLayer(
   lineProvider: LineCartesianLayer.LineProvider =
     LineCartesianLayer.LineProvider.series(
       vicoTheme.lineCartesianLayerColors.map { color ->
-        rememberLine(LineCartesianLayer.LineFill.single(fill(color)))
+        LineCartesianLayer.rememberLine(LineCartesianLayer.LineFill.single(fill(color)))
       }
     ),
   pointSpacing: Dp = Defaults.POINT_SPACING.dp,
-  axisValueOverrider: AxisValueOverrider = remember { AxisValueOverrider.auto() },
+  rangeProvider: CartesianLayerRangeProvider = remember { CartesianLayerRangeProvider.auto() },
   verticalAxisPosition: Axis.Position.Vertical? = null,
   drawingModelInterpolator:
     CartesianLayerDrawingModelInterpolator<
@@ -56,19 +59,38 @@ public fun rememberLineCartesianLayer(
     remember {
       CartesianLayerDrawingModelInterpolator.default()
     },
-): LineCartesianLayer =
-  remember { LineCartesianLayer(lineProvider) }
-    .apply {
-      this.lineProvider = lineProvider
-      this.pointSpacingDp = pointSpacing.value
-      this.axisValueOverrider = axisValueOverrider
-      this.verticalAxisPosition = verticalAxisPosition
-      this.drawingModelInterpolator = drawingModelInterpolator
-    }
+): LineCartesianLayer {
+  var lineCartesianLayerWrapper by remember { ValueWrapper<LineCartesianLayer?>(null) }
+  return remember(
+    lineProvider,
+    pointSpacing,
+    rangeProvider,
+    verticalAxisPosition,
+    drawingModelInterpolator,
+  ) {
+    val lineCartesianLayer =
+      lineCartesianLayerWrapper?.copy(
+        lineProvider,
+        pointSpacing.value,
+        rangeProvider,
+        verticalAxisPosition,
+        drawingModelInterpolator,
+      )
+        ?: LineCartesianLayer(
+          lineProvider,
+          pointSpacing.value,
+          rangeProvider,
+          verticalAxisPosition,
+          drawingModelInterpolator,
+        )
+    lineCartesianLayerWrapper = lineCartesianLayer
+    lineCartesianLayer
+  }
+}
 
 /** Creates and remembers a [LineCartesianLayer.Line]. */
 @Composable
-public fun rememberLine(
+public fun LineCartesianLayer.Companion.rememberLine(
   fill: LineCartesianLayer.LineFill =
     vicoTheme.lineCartesianLayerColors.first().let { color ->
       remember(color) { LineCartesianLayer.LineFill.single(fill(color)) }
@@ -111,13 +133,11 @@ public fun rememberLine(
     )
   }
 
-/** Creates and remembers a [LineCartesianLayer.Point]. */
-@Composable
-public fun rememberPoint(
+/** Creates a [LineCartesianLayer.Point]. */
+public fun LineCartesianLayer.Companion.point(
   component: Component,
   size: Dp = Defaults.POINT_SIZE.dp,
-): LineCartesianLayer.Point =
-  remember(component, size) { LineCartesianLayer.Point(component, size.value) }
+): LineCartesianLayer.Point = LineCartesianLayer.Point(component, size.value)
 
 private val StrokeCap.paintCap: Paint.Cap
   get() =

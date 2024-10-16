@@ -23,9 +23,9 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesian
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.CartesianChart
 import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
+import com.patrykandpatrick.vico.core.cartesian.CartesianLayerPadding
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.core.cartesian.FadingEdges
-import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModel
 import com.patrykandpatrick.vico.core.cartesian.decoration.Decoration
@@ -33,6 +33,7 @@ import com.patrykandpatrick.vico.core.cartesian.layer.CartesianLayer
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.core.common.Legend
+import com.patrykandpatrick.vico.core.common.ValueWrapper
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
 
 /**
@@ -51,26 +52,61 @@ public fun rememberCartesianChart(
   bottomAxis: Axis<Axis.Position.Horizontal.Bottom>? = null,
   marker: CartesianMarker? = null,
   markerVisibilityListener: CartesianMarkerVisibilityListener? = null,
-  horizontalLayout: HorizontalLayout = HorizontalLayout.segmented(),
+  layerPadding: CartesianLayerPadding = cartesianLayerPadding(),
   legend: Legend<CartesianMeasuringContext, CartesianDrawingContext>? = null,
   fadingEdges: FadingEdges? = null,
   decorations: List<Decoration> = emptyList(),
   persistentMarkers: (CartesianChart.PersistentMarkerScope.(ExtraStore) -> Unit)? = null,
   getXStep: ((CartesianChartModel) -> Double) = { it.getXDeltaGcd() },
 ): CartesianChart {
-  return remember(*layers) { CartesianChart(*layers) }
-    .apply {
-      this.startAxis = startAxis
-      this.topAxis = topAxis
-      this.endAxis = endAxis
-      this.bottomAxis = bottomAxis
-      this.marker = marker
-      this.markerVisibilityListener = markerVisibilityListener
-      this.horizontalLayout = horizontalLayout
-      this.legend = legend
-      this.fadingEdges = fadingEdges
-      this.decorations = decorations
-      this.persistentMarkers = persistentMarkers
-      this.getXStep = getXStep
-    }
+  val wrapper = remember { ValueWrapper<CartesianChart?>(null) }
+  return remember(
+    *layers,
+    startAxis,
+    topAxis,
+    endAxis,
+    bottomAxis,
+    marker,
+    markerVisibilityListener,
+    layerPadding,
+    legend,
+    fadingEdges,
+    decorations,
+    persistentMarkers,
+    getXStep,
+  ) {
+    val cartesianChart =
+      wrapper.value?.copy(
+        *layers,
+        startAxis = startAxis,
+        topAxis = topAxis,
+        endAxis = endAxis,
+        bottomAxis = bottomAxis,
+        marker = marker,
+        markerVisibilityListener = markerVisibilityListener,
+        layerPadding = layerPadding,
+        legend = legend,
+        fadingEdges = fadingEdges,
+        decorations = decorations,
+        persistentMarkers = persistentMarkers,
+        getXStep = getXStep,
+      )
+        ?: CartesianChart(
+          *layers,
+          startAxis = startAxis,
+          topAxis = topAxis,
+          endAxis = endAxis,
+          bottomAxis = bottomAxis,
+          marker = marker,
+          markerVisibilityListener = markerVisibilityListener,
+          layerPadding = layerPadding,
+          legend = legend,
+          fadingEdges = fadingEdges,
+          decorations = decorations,
+          persistentMarkers = persistentMarkers,
+          getXStep = getXStep,
+        )
+    wrapper.value = cartesianChart
+    cartesianChart
+  }
 }
