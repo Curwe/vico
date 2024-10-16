@@ -14,22 +14,12 @@
  * limitations under the License.
  */
 
-package com.patrykandpatrick.vico.core.common
+package com.patrykandpatrick.vico.compose.common
 
-import android.graphics.RectF
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.patrykandpatrick.vico.core.common.ValueWrapper
 
-/** Defines an abstract component that has some physical bounds. */
-public interface Bounded {
-  /** The bounds of the abstract component. */
-  public val bounds: RectF
-
-  /** Sets the coordinates of the bounds to the provided values. */
-  public fun setBounds(left: Number, top: Number, right: Number, bottom: Number) {
-    bounds.set(left, top, right, bottom)
-  }
-
-  /** Sets the coordinates of the bounds to the provided bounds. */
-  public fun setBounds(bounds: RectF) {
-    this.bounds.set(bounds)
-  }
-}
+@Composable
+internal fun <T> rememberWrappedValue(value: T): ValueWrapper<T> =
+  remember { ValueWrapper(value) }.also { it.value = value }

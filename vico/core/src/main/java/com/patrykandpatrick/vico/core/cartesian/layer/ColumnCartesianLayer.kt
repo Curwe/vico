@@ -17,18 +17,18 @@
 package com.patrykandpatrick.vico.core.cartesian.layer
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import com.patrykandpatrick.vico.core.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.core.cartesian.CartesianMeasuringContext
-import com.patrykandpatrick.vico.core.cartesian.HorizontalLayout
 import com.patrykandpatrick.vico.core.cartesian.MutableHorizontalDimensions
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.AxisValueOverrider
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartRanges
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.ChartValues
 import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerDrawingModel
 import com.patrykandpatrick.vico.core.cartesian.data.ColumnCartesianLayerModel
-import com.patrykandpatrick.vico.core.cartesian.data.MutableChartValues
+import com.patrykandpatrick.vico.core.cartesian.data.MutableCartesianChartRanges
 import com.patrykandpatrick.vico.core.cartesian.data.forEachIn
 import com.patrykandpatrick.vico.core.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.core.cartesian.marker.ColumnCartesianLayerMarkerTarget
@@ -47,42 +47,31 @@ import com.patrykandpatrick.vico.core.common.half
 import com.patrykandpatrick.vico.core.common.inBounds
 import com.patrykandpatrick.vico.core.common.saveLayer
 import com.patrykandpatrick.vico.core.common.unaryMinus
+import java.util.Objects
 import kotlin.math.abs
 import kotlin.math.min
 
-/**
- * Displays data as vertical bars.
- *
- * @property columnProvider provides the column [LineComponent]s.
- * @property columnCollectionSpacingDp the spacing between neighboring column collections (in dp).
- * @property mergeMode defines how columns should be drawn in column collections.
- * @property dataLabel the [TextComponent] for the data labels. Use `null` for no data labels.
- * @property dataLabelVerticalPosition the vertical position of each data label relative to its
- *   column’s top edge.
- * @property dataLabelValueFormatter the [CartesianValueFormatter] for the data labels.
- * @property dataLabelRotationDegrees the rotation of the data labels (in degrees).
- * @property axisValueOverrider overrides the _x_ and _y_ ranges.
- * @property verticalAxisPosition the position of the [VerticalAxis] with which the
- *   [ColumnCartesianLayer] should be associated. Use this for independent [CartesianLayer] scaling.
- * @property drawingModelInterpolator interpolates the [ColumnCartesianLayer]’s
- *   [ColumnCartesianLayerDrawingModel]s.
- */
-public open class ColumnCartesianLayer(
-  public var columnProvider: ColumnProvider,
-  public var columnCollectionSpacingDp: Float = Defaults.COLUMN_COLLECTION_SPACING,
-  public var mergeMode: (ExtraStore) -> MergeMode = { MergeMode.Grouped() },
-  public var dataLabel: TextComponent? = null,
-  public var dataLabelVerticalPosition: VerticalPosition = VerticalPosition.Top,
-  public var dataLabelValueFormatter: CartesianValueFormatter = CartesianValueFormatter.decimal(),
-  public var dataLabelRotationDegrees: Float = 0f,
-  public var axisValueOverrider: AxisValueOverrider = AxisValueOverrider.auto(),
-  public var verticalAxisPosition: Axis.Position.Vertical? = null,
-  public var drawingModelInterpolator:
+/** Displays data as vertical bars. */
+@Stable
+public open class ColumnCartesianLayer
+protected constructor(
+  protected val columnProvider: ColumnProvider,
+  protected val columnCollectionSpacingDp: Float = Defaults.COLUMN_COLLECTION_SPACING,
+  protected val mergeMode: (ExtraStore) -> MergeMode = { MergeMode.Grouped() },
+  protected val dataLabel: TextComponent? = null,
+  protected val dataLabelVerticalPosition: VerticalPosition = VerticalPosition.Top,
+  protected val dataLabelValueFormatter: CartesianValueFormatter =
+    CartesianValueFormatter.decimal(),
+  protected val dataLabelRotationDegrees: Float = 0f,
+  protected val rangeProvider: CartesianLayerRangeProvider = CartesianLayerRangeProvider.auto(),
+  protected val verticalAxisPosition: Axis.Position.Vertical? = null,
+  protected val drawingModelInterpolator:
     CartesianLayerDrawingModelInterpolator<
       ColumnCartesianLayerDrawingModel.ColumnInfo,
       ColumnCartesianLayerDrawingModel,
     > =
     CartesianLayerDrawingModelInterpolator.default(),
+  protected val drawingModelKey: ExtraStore.Key<ColumnCartesianLayerDrawingModel>,
 ) : BaseCartesianLayer<ColumnCartesianLayerModel>() {
   private val _markerTargets =
     mutableMapOf<Double, MutableList<MutableColumnCartesianLayerMarkerTarget>>()
@@ -92,28 +81,68 @@ public open class ColumnCartesianLayer(
   /** Holds information on the [ColumnCartesianLayer]’s horizontal dimensions. */
   protected val horizontalDimensions: MutableHorizontalDimensions = MutableHorizontalDimensions()
 
-  protected val drawingModelKey: ExtraStore.Key<ColumnCartesianLayerDrawingModel> = ExtraStore.Key()
-
   override val markerTargets: Map<Double, List<CartesianMarker.Target>> = _markerTargets
+
+  /**
+   * @property columnProvider provides the column [LineComponent]s.
+   * @property columnCollectionSpacingDp the spacing between neighboring column collections (in dp).
+   * @property mergeMode defines how columns should be drawn in column collections.
+   * @property dataLabel the [TextComponent] for the data labels. Use `null` for no data labels.
+   * @property dataLabelVerticalPosition the vertical position of each data label relative to its
+   *   column’s top edge.
+   * @property dataLabelValueFormatter the [CartesianValueFormatter] for the data labels.
+   * @property dataLabelRotationDegrees the rotation of the data labels (in degrees).
+   * @property rangeProvider defines the _x_ and _y_ ranges.
+   * @property verticalAxisPosition the position of the [VerticalAxis] with which the
+   *   [ColumnCartesianLayer] should be associated. Use this for independent [CartesianLayer]
+   *   scaling.
+   * @property drawingModelInterpolator interpolates the [ColumnCartesianLayer]’s
+   *   [ColumnCartesianLayerDrawingModel]s.
+   */
+  public constructor(
+    columnProvider: ColumnProvider,
+    columnCollectionSpacingDp: Float = Defaults.COLUMN_COLLECTION_SPACING,
+    mergeMode: (ExtraStore) -> MergeMode = { MergeMode.Grouped() },
+    dataLabel: TextComponent? = null,
+    dataLabelVerticalPosition: VerticalPosition = VerticalPosition.Top,
+    dataLabelValueFormatter: CartesianValueFormatter = CartesianValueFormatter.decimal(),
+    dataLabelRotationDegrees: Float = 0f,
+    rangeProvider: CartesianLayerRangeProvider = CartesianLayerRangeProvider.auto(),
+    verticalAxisPosition: Axis.Position.Vertical? = null,
+    drawingModelInterpolator:
+      CartesianLayerDrawingModelInterpolator<
+        ColumnCartesianLayerDrawingModel.ColumnInfo,
+        ColumnCartesianLayerDrawingModel,
+      > =
+      CartesianLayerDrawingModelInterpolator.default(),
+  ) : this(
+    columnProvider,
+    columnCollectionSpacingDp,
+    mergeMode,
+    dataLabel,
+    dataLabelVerticalPosition,
+    dataLabelValueFormatter,
+    dataLabelRotationDegrees,
+    rangeProvider,
+    verticalAxisPosition,
+    drawingModelInterpolator,
+    ExtraStore.Key(),
+  )
 
   override fun drawInternal(context: CartesianDrawingContext, model: ColumnCartesianLayerModel) {
     with(context) {
       _markerTargets.clear()
-      drawChartInternal(
-        chartValues = chartValues,
-        model = model,
-        drawingModel = model.extraStore.getOrNull(drawingModelKey),
-      )
+      drawChartInternal(model, ranges, model.extraStore.getOrNull(drawingModelKey))
       stackInfo.clear()
     }
   }
 
   protected open fun CartesianDrawingContext.drawChartInternal(
-    chartValues: ChartValues,
     model: ColumnCartesianLayerModel,
+    ranges: CartesianChartRanges,
     drawingModel: ColumnCartesianLayerDrawingModel?,
   ) {
-    val yRange = chartValues.getYRange(verticalAxisPosition)
+    val yRange = ranges.getYRange(verticalAxisPosition)
     val heightMultiplier = layerBounds.height() / yRange.length.toFloat()
 
     var drawingStart: Float
@@ -130,18 +159,13 @@ public open class ColumnCartesianLayer(
     model.series.forEachIndexed { index, entryCollection ->
       drawingStart = getDrawingStart(index, model.series.size, mergeMode) - scroll
 
-      entryCollection.forEachIn(chartValues.minX..chartValues.maxX) { entry, _ ->
-
-        var columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)
-        columnInfo = columnInfo ?: drawingModel?.getOrNull(index)?.get(chartValues.minX)
-
-        height =
-          (columnInfo?.height ?: (abs(entry.y) / yRange.length)).toFloat() * layerBounds.height()
-        val xSpacingMultiplier = ((entry.x - chartValues.minX) / chartValues.xStep).toFloat()
+      entryCollection.forEachIn(ranges.minX..ranges.maxX) { entry, _ ->
+        val columnInfo = drawingModel?.getOrNull(index)?.get(entry.x)
+        height = (columnInfo?.height ?: (abs(entry.y) / yRange.length)).toFloat() * layerBounds.height()
+        val xSpacingMultiplier = ((entry.x - ranges.minX) / ranges.xStep).toFloat()
         val column =  if (entry is ColumnCartesianLayerModel.ColoredEntry) {
           entry.lineComponent
         } else columnProvider.getColumn(entry, index, model.extraStore)
-
         columnCenterX =
           drawingStart +
             (horizontalDimensions.xSpacing * xSpacingMultiplier +
@@ -192,8 +216,8 @@ public open class ColumnCartesianLayer(
             dataLabelValue = entry.y,
             x = columnCenterX,
             y = columnSignificantY,
-            isFirst = index == 0 && entry.x == chartValues.minX,
-            isLast = index == model.series.lastIndex && entry.x == chartValues.maxX,
+            isFirst = index == 0 && entry.x == ranges.minX,
+            isLast = index == model.series.lastIndex && entry.x == ranges.maxX,
             mergeMode = mergeMode,
           )
         } else if (index == model.series.lastIndex) {
@@ -204,8 +228,8 @@ public open class ColumnCartesianLayer(
             x = columnCenterX,
             zeroLinePosition = zeroLinePosition,
             heightMultiplier = heightMultiplier,
-            isFirst = entry.x == chartValues.minX,
-            isLast = entry.x == chartValues.maxX,
+            isFirst = entry.x == ranges.minX,
+            isLast = entry.x == ranges.maxX,
             mergeMode = mergeMode,
           )
         }
@@ -273,18 +297,9 @@ public open class ColumnCartesianLayer(
               .pixels * zoom
           else -> error(message = "Encountered an unexpected `MergeMode`.")
         }
-      if (isFirst && horizontalLayout is HorizontalLayout.FullWidth) {
-        maxWidth = maxWidth.coerceAtMost(horizontalDimensions.startPadding.doubled)
-      }
-      if (isLast && horizontalLayout is HorizontalLayout.FullWidth) {
-        maxWidth = maxWidth.coerceAtMost(horizontalDimensions.endPadding.doubled)
-      }
-      val text =
-        dataLabelValueFormatter.format(
-          value = dataLabelValue,
-          chartValues = chartValues,
-          verticalAxisPosition = verticalAxisPosition,
-        )
+      if (isFirst) maxWidth = maxWidth.coerceAtMost(horizontalDimensions.startPadding.doubled)
+      if (isLast) maxWidth = maxWidth.coerceAtMost(horizontalDimensions.endPadding.doubled)
+      val text = dataLabelValueFormatter.format(this, dataLabelValue, verticalAxisPosition)
       val dataLabelWidth =
         textComponent
           .getWidth(context = this, text = text, rotationDegrees = dataLabelRotationDegrees)
@@ -356,18 +371,15 @@ public open class ColumnCartesianLayer(
     }
   }
 
-  override fun updateChartValues(
-    chartValues: MutableChartValues,
-    model: ColumnCartesianLayerModel,
-  ) {
+  override fun updateRanges(ranges: MutableCartesianChartRanges, model: ColumnCartesianLayerModel) {
     val mergeMode = mergeMode(model.extraStore)
     val minY = mergeMode.getMinY(model)
     val maxY = mergeMode.getMaxY(model)
-    chartValues.tryUpdate(
-      axisValueOverrider.getMinX(model.minX, model.maxX, model.extraStore),
-      axisValueOverrider.getMaxX(model.minX, model.maxX, model.extraStore),
-      axisValueOverrider.getMinY(minY, maxY, model.extraStore),
-      axisValueOverrider.getMaxY(minY, maxY, model.extraStore),
+    ranges.tryUpdate(
+      rangeProvider.getMinX(model.minX, model.maxX, model.extraStore),
+      rangeProvider.getMaxX(model.minX, model.maxX, model.extraStore),
+      rangeProvider.getMinY(minY, maxY, model.extraStore),
+      rangeProvider.getMaxY(minY, maxY, model.extraStore),
       verticalAxisPosition,
     )
   }
@@ -384,21 +396,14 @@ public open class ColumnCartesianLayer(
           mergeMode(model.extraStore),
         )
       val xSpacing = columnCollectionWidth + columnCollectionSpacingDp.pixels
-      when (val horizontalLayout = horizontalLayout) {
-        is HorizontalLayout.Segmented ->
-          horizontalDimensions.ensureSegmentedValues(xSpacing, chartValues)
-        is HorizontalLayout.FullWidth -> {
-          horizontalDimensions.ensureValuesAtLeast(
-            xSpacing = xSpacing,
-            scalableStartPadding =
-              columnCollectionWidth.half + horizontalLayout.scalableStartPaddingDp.pixels,
-            scalableEndPadding =
-              columnCollectionWidth.half + horizontalLayout.scalableEndPaddingDp.pixels,
-            unscalableStartPadding = horizontalLayout.unscalableStartPaddingDp.pixels,
-            unscalableEndPadding = horizontalLayout.unscalableEndPaddingDp.pixels,
-          )
-        }
-      }
+      horizontalDimensions.ensureValuesAtLeast(
+        xSpacing = xSpacing,
+        scalableStartPadding =
+          columnCollectionWidth.half + layerPadding.scalableStartPaddingDp.pixels,
+        scalableEndPadding = columnCollectionWidth.half + layerPadding.scalableEndPaddingDp.pixels,
+        unscalableStartPadding = layerPadding.unscalableStartPaddingDp.pixels,
+        unscalableEndPadding = layerPadding.unscalableEndPaddingDp.pixels,
+      )
     }
   }
 
@@ -410,9 +415,7 @@ public open class ColumnCartesianLayer(
       is MergeMode.Stacked ->
         (0..<entryCollectionSize)
           .maxOf { seriesIndex ->
-            columnProvider
-              .getWidestSeriesColumn(seriesIndex, chartValues.model.extraStore)
-              .thicknessDp
+            columnProvider.getWidestSeriesColumn(seriesIndex, model.extraStore).thicknessDp
           }
           .pixels
       is MergeMode.Grouped ->
@@ -441,8 +444,7 @@ public open class ColumnCartesianLayer(
   protected open fun CartesianMeasuringContext.getCumulatedThickness(count: Int): Float {
     var thickness = 0f
     for (seriesIndex in 0..<count) {
-      thickness +=
-        columnProvider.getWidestSeriesColumn(seriesIndex, chartValues.model.extraStore).thicknessDp
+      thickness += columnProvider.getWidestSeriesColumn(seriesIndex, model.extraStore).thicknessDp
     }
     return thickness.pixels
   }
@@ -485,12 +487,12 @@ public open class ColumnCartesianLayer(
 
   override fun prepareForTransformation(
     model: ColumnCartesianLayerModel?,
+    ranges: CartesianChartRanges,
     extraStore: MutableExtraStore,
-    chartValues: ChartValues,
   ) {
     drawingModelInterpolator.setModels(
       old = extraStore.getOrNull(drawingModelKey),
-      new = model?.toDrawingModel(chartValues),
+      new = model?.toDrawingModel(ranges),
     )
   }
 
@@ -499,17 +501,77 @@ public open class ColumnCartesianLayer(
       ?: extraStore.remove(drawingModelKey)
   }
 
-  private fun ColumnCartesianLayerModel.toDrawingModel(chartValues: ChartValues) =
+  private fun ColumnCartesianLayerModel.toDrawingModel(ranges: CartesianChartRanges) =
     series
       .map { series ->
         series.associate { entry ->
           entry.x to
             ColumnCartesianLayerDrawingModel.ColumnInfo(
-              height = (abs(entry.y) / chartValues.getYRange(verticalAxisPosition).length).toFloat()
+              height = (abs(entry.y) / ranges.getYRange(verticalAxisPosition).length).toFloat()
             )
         }
       }
       .let(::ColumnCartesianLayerDrawingModel)
+
+  /** Creates a new [ColumnCartesianLayer] based on this one. */
+  public fun copy(
+    columnProvider: ColumnProvider = this.columnProvider,
+    columnCollectionSpacingDp: Float = this.columnCollectionSpacingDp,
+    mergeMode: (ExtraStore) -> MergeMode = this.mergeMode,
+    dataLabel: TextComponent? = this.dataLabel,
+    dataLabelVerticalPosition: VerticalPosition = this.dataLabelVerticalPosition,
+    dataLabelValueFormatter: CartesianValueFormatter = this.dataLabelValueFormatter,
+    dataLabelRotationDegrees: Float = this.dataLabelRotationDegrees,
+    rangeProvider: CartesianLayerRangeProvider = this.rangeProvider,
+    verticalAxisPosition: Axis.Position.Vertical? = this.verticalAxisPosition,
+    drawingModelInterpolator:
+      CartesianLayerDrawingModelInterpolator<
+        ColumnCartesianLayerDrawingModel.ColumnInfo,
+        ColumnCartesianLayerDrawingModel,
+      > =
+      this.drawingModelInterpolator,
+  ): ColumnCartesianLayer =
+    ColumnCartesianLayer(
+      columnProvider,
+      columnCollectionSpacingDp,
+      mergeMode,
+      dataLabel,
+      dataLabelVerticalPosition,
+      dataLabelValueFormatter,
+      dataLabelRotationDegrees,
+      rangeProvider,
+      verticalAxisPosition,
+      drawingModelInterpolator,
+      drawingModelKey,
+    )
+
+  override fun equals(other: Any?): Boolean =
+    this === other ||
+      other is ColumnCartesianLayer &&
+        columnProvider == other.columnProvider &&
+        columnCollectionSpacingDp == other.columnCollectionSpacingDp &&
+        mergeMode == other.mergeMode &&
+        dataLabel == other.dataLabel &&
+        dataLabelVerticalPosition == other.dataLabelVerticalPosition &&
+        dataLabelValueFormatter == other.dataLabelValueFormatter &&
+        dataLabelRotationDegrees == other.dataLabelRotationDegrees &&
+        rangeProvider == other.rangeProvider &&
+        verticalAxisPosition == other.verticalAxisPosition &&
+        drawingModelInterpolator == other.drawingModelInterpolator
+
+  override fun hashCode(): Int =
+    Objects.hash(
+      columnProvider,
+      columnCollectionSpacingDp,
+      mergeMode,
+      dataLabel,
+      dataLabelVerticalPosition,
+      dataLabelValueFormatter,
+      dataLabelRotationDegrees,
+      rangeProvider,
+      verticalAxisPosition,
+      drawingModelInterpolator,
+    )
 
   protected data class StackInfo(
     var topY: Double = 0.0,
