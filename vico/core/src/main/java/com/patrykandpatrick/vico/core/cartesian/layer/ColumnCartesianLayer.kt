@@ -51,7 +51,23 @@ import java.util.Objects
 import kotlin.math.abs
 import kotlin.math.min
 
-/** Displays data as vertical bars. */
+/**
+ * Displays data as vertical bars.
+ *
+ * @property columnProvider provides the column [LineComponent]s.
+ * @property columnCollectionSpacingDp the spacing between neighboring column collections (in dp).
+ * @property mergeMode defines how columns should be drawn in column collections.
+ * @property dataLabel the [TextComponent] for the data labels. Use `null` for no data labels.
+ * @property dataLabelVerticalPosition the vertical position of each data label relative to its
+ *   column’s top edge.
+ * @property dataLabelValueFormatter the [CartesianValueFormatter] for the data labels.
+ * @property dataLabelRotationDegrees the rotation of the data labels (in degrees).
+ * @property rangeProvider defines the _x_ and _y_ ranges.
+ * @property verticalAxisPosition the position of the [VerticalAxis] with which the
+ *   [ColumnCartesianLayer] should be associated. Use this for independent [CartesianLayer] scaling.
+ * @property drawingModelInterpolator interpolates the [ColumnCartesianLayer]’s
+ *   [ColumnCartesianLayerDrawingModel]s.
+ */
 @Stable
 public open class ColumnCartesianLayer
 protected constructor(
@@ -83,22 +99,7 @@ protected constructor(
 
   override val markerTargets: Map<Double, List<CartesianMarker.Target>> = _markerTargets
 
-  /**
-   * @property columnProvider provides the column [LineComponent]s.
-   * @property columnCollectionSpacingDp the spacing between neighboring column collections (in dp).
-   * @property mergeMode defines how columns should be drawn in column collections.
-   * @property dataLabel the [TextComponent] for the data labels. Use `null` for no data labels.
-   * @property dataLabelVerticalPosition the vertical position of each data label relative to its
-   *   column’s top edge.
-   * @property dataLabelValueFormatter the [CartesianValueFormatter] for the data labels.
-   * @property dataLabelRotationDegrees the rotation of the data labels (in degrees).
-   * @property rangeProvider defines the _x_ and _y_ ranges.
-   * @property verticalAxisPosition the position of the [VerticalAxis] with which the
-   *   [ColumnCartesianLayer] should be associated. Use this for independent [CartesianLayer]
-   *   scaling.
-   * @property drawingModelInterpolator interpolates the [ColumnCartesianLayer]’s
-   *   [ColumnCartesianLayerDrawingModel]s.
-   */
+  /** Creates a [ColumnCartesianLayer]. */
   public constructor(
     columnProvider: ColumnProvider,
     columnCollectionSpacingDp: Float = Defaults.COLUMN_COLLECTION_SPACING,
@@ -398,11 +399,10 @@ protected constructor(
       val xSpacing = columnCollectionWidth + columnCollectionSpacingDp.pixels
       horizontalDimensions.ensureValuesAtLeast(
         xSpacing = xSpacing,
-        scalableStartPadding =
-          columnCollectionWidth.half + layerPadding.scalableStartPaddingDp.pixels,
-        scalableEndPadding = columnCollectionWidth.half + layerPadding.scalableEndPaddingDp.pixels,
-        unscalableStartPadding = layerPadding.unscalableStartPaddingDp.pixels,
-        unscalableEndPadding = layerPadding.unscalableEndPaddingDp.pixels,
+        scalableStartPadding = columnCollectionWidth.half + layerPadding.scalableStartDp.pixels,
+        scalableEndPadding = columnCollectionWidth.half + layerPadding.scalableEndDp.pixels,
+        unscalableStartPadding = layerPadding.unscalableStartDp.pixels,
+        unscalableEndPadding = layerPadding.unscalableEndDp.pixels,
       )
     }
   }
@@ -591,6 +591,7 @@ protected constructor(
   }
 
   /** Provides column [LineComponent]s to [ColumnCartesianLayer]s. */
+  @Immutable
   public interface ColumnProvider {
     /** Returns the [LineComponent] for the column with the given properties. */
     public fun getColumn(
