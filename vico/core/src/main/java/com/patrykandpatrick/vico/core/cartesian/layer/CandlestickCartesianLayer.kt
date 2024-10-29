@@ -44,7 +44,18 @@ import com.patrykandpatrick.vico.core.common.shape.Shape
 import java.util.Objects
 import kotlin.math.max
 
-/** Draws the content of candlestick charts. */
+/**
+ * Draws the content of candlestick charts.
+ *
+ * @property candles provides the [Candle]s.
+ * @property minCandleBodyHeightDp the minimum height of the candle bodies (in dp).
+ * @property candleSpacingDp the spacing between neighboring candles.
+ * @property scaleCandleWicks whether the candle wicks should be scaled based on the zoom factor.
+ * @property rangeProvider defines the _x_ and _y_ ranges.
+ * @property verticalAxisPosition the position of the [VerticalAxis] with which the
+ *   [CandlestickCartesianLayer] should be associated. Use this for independent [CartesianLayer]
+ *   scaling.
+ */
 @Stable
 public open class CandlestickCartesianLayer
 protected constructor(
@@ -89,16 +100,7 @@ protected constructor(
 
   override val markerTargets: Map<Double, List<CartesianMarker.Target>> = _markerTargets
 
-  /**
-   * @property candles provides the [Candle]s.
-   * @property minCandleBodyHeightDp the minimum height of the candle bodies (in dp).
-   * @property candleSpacingDp the spacing between neighboring candles.
-   * @property scaleCandleWicks whether the candle wicks should be scaled based on the zoom factor.
-   * @property rangeProvider defines the _x_ and _y_ ranges.
-   * @property verticalAxisPosition the position of the [VerticalAxis] with which the
-   *   [CandlestickCartesianLayer] should be associated. Use this for independent [CartesianLayer]
-   *   scaling.
-   */
+  /** Creates a [CandlestickCartesianLayer]. */
   public constructor(
     candles: CandleProvider,
     minCandleBodyHeightDp: Float = Defaults.MIN_CANDLE_BODY_HEIGHT_DP,
@@ -266,10 +268,10 @@ protected constructor(
       val xSpacing = candleWidth + candleSpacingDp.pixels
       horizontalDimensions.ensureValuesAtLeast(
         xSpacing = xSpacing,
-        scalableStartPadding = candleWidth.half + layerPadding.scalableStartPaddingDp.pixels,
-        scalableEndPadding = candleWidth.half + layerPadding.scalableEndPaddingDp.pixels,
-        unscalableStartPadding = layerPadding.unscalableStartPaddingDp.pixels,
-        unscalableEndPadding = layerPadding.unscalableEndPaddingDp.pixels,
+        scalableStartPadding = candleWidth.half + layerPadding.scalableStartDp.pixels,
+        scalableEndPadding = candleWidth.half + layerPadding.scalableEndDp.pixels,
+        unscalableStartPadding = layerPadding.unscalableStartDp.pixels,
+        unscalableEndPadding = layerPadding.unscalableEndDp.pixels,
       )
     }
   }
