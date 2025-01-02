@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 by Patryk Goworowski and Patrick Michalik.
+ * Copyright 2025 by Patryk Goworowski and Patrick Michalik.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,14 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.animation.AccelerateInterpolator
 import com.patrykandpatrick.vico.core.cartesian.CartesianChart
-import com.patrykandpatrick.vico.core.cartesian.CartesianLayerPadding
 import com.patrykandpatrick.vico.core.cartesian.FadingEdges
 import com.patrykandpatrick.vico.core.cartesian.axis.Axis
 import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.layer.CartesianLayerPadding
 import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.Defaults.FADING_EDGE_VISIBILITY_THRESHOLD_DP
+import com.patrykandpatrick.vico.core.common.Position
 import com.patrykandpatrick.vico.core.common.hasFlag
 import com.patrykandpatrick.vico.core.common.shape.DashedShape
 import com.patrykandpatrick.vico.views.R
@@ -178,8 +179,11 @@ internal class ThemeHandler(private val context: Context, attrs: AttributeSet?) 
                     0,
                   )],
             verticalLabelPosition =
-              VerticalAxis.VerticalLabelPosition.entries[
-                  axisStyle.getInteger(R.styleable.AxisStyle_verticalAxisVerticalLabelPosition, 0)],
+              Position.Vertical.entries[
+                  axisStyle.getInteger(
+                    R.styleable.AxisStyle_verticalAxisVerticalLabelPosition,
+                    Position.Vertical.Center.ordinal,
+                  )],
             tick = tick,
             tickLengthDp = tickLengthDp,
             guideline = guideline,
@@ -267,8 +271,8 @@ internal class ThemeHandler(private val context: Context, attrs: AttributeSet?) 
         }
 
       FadingEdges(
-        startEdgeWidthDp = startLength,
-        endEdgeWidthDp = endLength,
+        startWidthDp = startLength,
+        endWidthDp = endLength,
         visibilityThresholdDp = threshold,
         visibilityInterpolator = interpolator ?: AccelerateInterpolator(),
       )
@@ -279,11 +283,13 @@ internal class ThemeHandler(private val context: Context, attrs: AttributeSet?) 
 
   private fun TypedArray.getHorizontalAxisItemPlacer(): HorizontalAxis.ItemPlacer {
     val shiftExtremeLines = getBoolean(R.styleable.AxisStyle_shiftExtremeHorizontalAxisLines, true)
+    val spacing = getInteger(R.styleable.AxisStyle_horizontalAxisLabelSpacing, 1)
+    val offset = getInteger(R.styleable.AxisStyle_horizontalAxisLabelOffset, 0)
     return when (getInteger(R.styleable.AxisStyle_horizontalAxisItemPlacer, 0)) {
       0 ->
         HorizontalAxis.ItemPlacer.aligned(
-          getInteger(R.styleable.AxisStyle_horizontalAxisLabelSpacing, 1),
-          getInteger(R.styleable.AxisStyle_horizontalAxisLabelOffset, 0),
+          { spacing },
+          { offset },
           shiftExtremeLines,
           getBoolean(R.styleable.AxisStyle_addExtremeHorizontalAxisLabelPadding, true),
         )

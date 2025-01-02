@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 by Patryk Goworowski and Patrick Michalik.
+ * Copyright 2025 by Patryk Goworowski and Patrick Michalik.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,16 @@ package com.patrykandpatrick.vico.views.common.theme
 import android.content.Context
 import android.content.res.TypedArray
 import android.graphics.Color
+import android.graphics.Paint
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.DefaultAlpha
 import com.patrykandpatrick.vico.core.common.Defaults
-import com.patrykandpatrick.vico.core.common.Dimensions
 import com.patrykandpatrick.vico.core.common.Fill
+import com.patrykandpatrick.vico.core.common.Insets
 import com.patrykandpatrick.vico.core.common.LayeredComponent
-import com.patrykandpatrick.vico.core.common.VerticalPosition
+import com.patrykandpatrick.vico.core.common.Position
 import com.patrykandpatrick.vico.core.common.component.Component
 import com.patrykandpatrick.vico.core.common.component.LineComponent
 import com.patrykandpatrick.vico.core.common.component.ShapeComponent
-import com.patrykandpatrick.vico.core.common.copyColor
-import com.patrykandpatrick.vico.core.common.shader.DynamicShader
 import com.patrykandpatrick.vico.core.common.shape.Shape
 import com.patrykandpatrick.vico.views.R
 import com.patrykandpatrick.vico.views.common.defaultColors
@@ -94,10 +92,10 @@ internal fun TypedArray.getComponent(context: Context): Component? = use { array
 
   if (layeredComponent != null) {
     LayeredComponent(
-      rear = baseComponent,
+      back = baseComponent,
       front = layeredComponent,
       padding =
-        Dimensions(
+        Insets(
           allDp =
             getRawDimension(
               context = context,
@@ -124,41 +122,11 @@ internal fun TypedArray.getLine(context: Context, defaultColor: Int): LineCartes
       getColor(R.styleable.LineStyle_android_color, defaultColor),
     )
 
-  val positiveGradientTopColor =
-    getColor(
-      R.styleable.LineStyle_positiveGradientTopColor,
-      getColor(
-        R.styleable.LineStyle_gradientTopColor,
-        positiveLineColor.copyColor(alpha = DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-      ),
-    )
-
-  val positiveGradientBottomColor =
-    getColor(
-      R.styleable.LineStyle_positiveGradientBottomColor,
-      getColor(
-        R.styleable.LineStyle_gradientBottomColor,
-        positiveLineColor.copyColor(alpha = DefaultAlpha.LINE_BACKGROUND_SHADER_END),
-      ),
-    )
-
-  val negativeGradientTopColor =
-    getColor(
-      R.styleable.LineStyle_negativeGradientTopColor,
-      getColor(
-        R.styleable.LineStyle_gradientBottomColor,
-        negativeLineColor.copyColor(alpha = DefaultAlpha.LINE_BACKGROUND_SHADER_END),
-      ),
-    )
-
-  val negativeGradientBottomColor =
-    getColor(
-      R.styleable.LineStyle_negativeGradientBottomColor,
-      getColor(
-        R.styleable.LineStyle_gradientTopColor,
-        negativeLineColor.copyColor(alpha = DefaultAlpha.LINE_BACKGROUND_SHADER_START),
-      ),
-    )
+  val dashLength = getRawDimension(context, R.styleable.LineStyle_dashLength, 0f)
+  val dashGap = getRawDimension(context, R.styleable.LineStyle_gapLength, 0f)
+  val thicknessDp =
+    getRawDimension(context, R.styleable.LineStyle_thickness, Defaults.LINE_SPEC_THICKNESS_DP)
+  val cap = Paint.Cap.entries[getInteger(R.styleable.LineStyle_android_strokeLineCap, 1)]
 
   return LineCartesianLayer.Line(
     fill =
@@ -167,13 +135,6 @@ internal fun TypedArray.getLine(context: Context, defaultColor: Int): LineCartes
       } else {
         LineCartesianLayer.LineFill.single(Fill(positiveLineColor))
       },
-    thicknessDp =
-      getRawDimension(context, R.styleable.LineStyle_thickness, Defaults.LINE_SPEC_THICKNESS_DP),
-    areaFill =
-      LineCartesianLayer.AreaFill.double(
-        Fill(DynamicShader.verticalGradient(positiveGradientTopColor, positiveGradientBottomColor)),
-        Fill(DynamicShader.verticalGradient(negativeGradientTopColor, negativeGradientBottomColor)),
-      ),
     pointProvider =
       getNestedTypedArray(context, R.styleable.LineStyle_pointStyle, R.styleable.ComponentStyle)
         .getComponent(context)
@@ -186,9 +147,13 @@ internal fun TypedArray.getLine(context: Context, defaultColor: Int): LineCartes
           )
         },
     pointConnector =
-      LineCartesianLayer.PointConnector.cubic(
-        getFraction(R.styleable.LineStyle_curvature, Defaults.LINE_CURVATURE)
-      ),
+      getFraction(R.styleable.LineStyle_curvature, 0f).let { curvature ->
+        if (curvature == 0f) {
+          LineCartesianLayer.PointConnector.Sharp
+        } else {
+          LineCartesianLayer.PointConnector.cubic(curvature)
+        }
+      },
     dataLabel =
       if (getBoolean(R.styleable.LineStyle_showDataLabels, false)) {
         getNestedTypedArray(
@@ -200,8 +165,14 @@ internal fun TypedArray.getLine(context: Context, defaultColor: Int): LineCartes
       } else {
         null
       },
-    dataLabelVerticalPosition =
-      VerticalPosition.entries[getInteger(R.styleable.LineStyle_dataLabelVerticalPosition, 0)],
+    dataLabelPosition =
+      Position.Vertical.entries[getInteger(R.styleable.LineStyle_dataLabelPosition, 0)],
     dataLabelRotationDegrees = getFloat(R.styleable.LineStyle_dataLabelRotationDegrees, 0f),
+    stroke =
+      if (dashLength > 0f && dashGap > 0f) {
+        LineCartesianLayer.LineStroke.Dashed(thicknessDp, cap, dashLength, dashGap)
+      } else {
+        LineCartesianLayer.LineStroke.Continuous(thicknessDp, cap)
+      },
   )
 }

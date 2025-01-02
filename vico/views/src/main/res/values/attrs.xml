@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2024 by Patryk Goworowski and Patrick Michalik.
+  ~ Copyright 2025 by Patryk Goworowski and Patrick Michalik.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 <resources>
     <attr name="dataLabelRotationDegrees" format="float" />
     <attr name="dataLabelStyle" format="reference" />
-    <attr name="dataLabelVerticalPosition" format="enum">
+    <attr name="dataLabelPosition" format="enum">
         <enum name="top" value="0" />
         <enum name="center" value="1" />
         <enum name="bottom" value="2" />
@@ -27,6 +27,8 @@
     <attr name="strokeColor" format="color" />
     <attr name="strokeThickness" format="dimension" />
     <attr name="thickness" format="dimension" />
+    <attr name="dashLength" format="dimension" />
+    <attr name="gapLength" format="dimension" />
 
     <declare-styleable name="AxisStyle">
         <!-- Equivalent to the `addExtremeLabel` parameter of
@@ -99,8 +101,8 @@
 
         <!-- The vertical position of the labels on this axis if it is vertical. -->
         <attr name="verticalAxisVerticalLabelPosition" format="enum">
-            <enum name="center" value="0" />
-            <enum name="top" value="1" />
+            <enum name="top" value="0" />
+            <enum name="center" value="1" />
             <enum name="bottom" value="2" />
         </attr>
     </declare-styleable>
@@ -308,7 +310,7 @@
 
         <!-- The vertical position of each data label relative to the top edge of its respective
         column. -->
-        <attr name="dataLabelVerticalPosition" />
+        <attr name="dataLabelPosition" />
 
         <!-- The distance between neighboring grouped columns. -->
         <attr name="groupedColumnSpacing" format="dimension" />
@@ -484,22 +486,13 @@
 
         <!-- The vertical position of each data label relative to its respective point on the
         line. -->
-        <attr name="dataLabelVerticalPosition" />
+        <attr name="dataLabelPosition" />
 
-        <!-- The bottom color of the vertical background gradient. -->
-        <attr name="gradientBottomColor" format="color" />
-
-        <!-- The top color of the vertical background gradient. -->
-        <attr name="gradientTopColor" format="color" />
+        <!-- The line stroke cap. -->
+        <attr name="android:strokeLineCap"/>
 
         <!-- The color for negative values. -->
         <attr name="negativeColor" format="color" />
-
-        <!-- The bottom color of the gradient for negative values. -->
-        <attr name="negativeGradientBottomColor" format="color" />
-
-        <!-- The top color of the gradient for negative values. -->
-        <attr name="negativeGradientTopColor" format="color" />
 
         <!-- The size of the points on the line. -->
         <attr name="pointSize" format="dimension" />
@@ -510,17 +503,17 @@
         <!-- The color for positive values. -->
         <attr name="positiveColor" format="color" />
 
-        <!-- The bottom color of the gradient for positive values. -->
-        <attr name="positiveGradientBottomColor" format="color" />
-
-        <!-- The top color of the gradient for positive values. -->
-        <attr name="positiveGradientTopColor" format="color" />
-
         <!-- Whether to show data labels. -->
         <attr name="showDataLabels" />
 
         <!-- The stroke thickness. -->
         <attr name="thickness" />
+
+        <!-- The dash length. 0 means no dashes. -->
+        <attr name="dashLength" />
+
+        <!-- The dash gap length. 0 means no dashes. -->
+        <attr name="gapLength" />
     </declare-styleable>
 
     <declare-styleable name="ShapeStyle">
@@ -552,10 +545,10 @@
         </attr>
 
         <!-- The dash length. 0 means no dashes. -->
-        <attr name="dashLength" format="dimension" />
+        <attr name="dashLength" />
 
         <!-- The dash gap length. 0 means no dashes. -->
-        <attr name="gapLength" format="dimension" />
+        <attr name="gapLength" />
 
         <!-- The size of the top-end corner. -->
         <attr name="topEndCornerSize" format="dimension|fraction" />

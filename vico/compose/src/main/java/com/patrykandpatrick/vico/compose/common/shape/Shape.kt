@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.core.common.Defaults
 import com.patrykandpatrick.vico.core.common.Defaults.MARKER_TICK_SIZE
 import com.patrykandpatrick.vico.core.common.MeasuringContext
-import com.patrykandpatrick.vico.core.common.shape.Corner
 import com.patrykandpatrick.vico.core.common.shape.CorneredShape
 import com.patrykandpatrick.vico.core.common.shape.DashedShape
 import com.patrykandpatrick.vico.core.common.shape.MarkerCorneredShape
@@ -147,30 +147,30 @@ public fun CorneredShape.Companion.cut(all: Dp = 0.dp): CorneredShape = cut(all.
 
 /** Creates a [MarkerCorneredShape]. */
 public fun markerCorneredShape(
-  topLeft: Corner,
-  topRight: Corner,
-  bottomRight: Corner,
-  bottomLeft: Corner,
-  tickSizeDp: Dp = MARKER_TICK_SIZE.dp,
+  topLeft: CorneredShape.Corner,
+  topRight: CorneredShape.Corner,
+  bottomRight: CorneredShape.Corner,
+  bottomLeft: CorneredShape.Corner,
+  tickSize: Dp = MARKER_TICK_SIZE.dp,
 ): MarkerCorneredShape =
-  MarkerCorneredShape(topLeft, topRight, bottomRight, bottomLeft, tickSizeDp.value)
+  MarkerCorneredShape(topLeft, topRight, bottomRight, bottomLeft, tickSize.value)
 
 /** Creates a [MarkerCorneredShape]. */
 public fun markerCorneredShape(
-  all: Corner,
-  tickSizeDp: Dp = MARKER_TICK_SIZE.dp,
-): MarkerCorneredShape = MarkerCorneredShape(all, tickSizeDp.value)
+  all: CorneredShape.Corner,
+  tickSize: Dp = MARKER_TICK_SIZE.dp,
+): MarkerCorneredShape = MarkerCorneredShape(all, tickSize.value)
 
 /** Creates a [MarkerCorneredShape]. */
 public fun markerCorneredShape(
-  corneredShape: CorneredShape,
-  tickSizeDp: Dp = MARKER_TICK_SIZE.dp,
-): MarkerCorneredShape = MarkerCorneredShape(corneredShape, tickSizeDp.value)
+  base: CorneredShape,
+  tickSize: Dp = MARKER_TICK_SIZE.dp,
+): MarkerCorneredShape = MarkerCorneredShape(base, tickSize.value)
 
 /** Creates a [DashedShape]. */
 public fun dashedShape(
-  shape: Shape,
-  dashLength: Dp,
-  gapLength: Dp,
+  shape: Shape = Shape.Rectangle,
+  dashLength: Dp = Defaults.DASHED_SHAPE_DASH_LENGTH.dp,
+  gapLength: Dp = Defaults.DASHED_SHAPE_GAP_LENGTH.dp,
   fitStrategy: DashedShape.FitStrategy = DashedShape.FitStrategy.Resize,
 ): DashedShape = DashedShape(shape, dashLength.value, gapLength.value, fitStrategy)
