@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 by Patryk Goworowski and Patrick Michalik.
+ * Copyright 2025 by Patryk Goworowski and Patrick Michalik.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,9 @@ import com.patrykandpatrick.vico.core.cartesian.layer.absolute
 import com.patrykandpatrick.vico.core.cartesian.layer.absoluteRelative
 import com.patrykandpatrick.vico.core.cartesian.layer.asWick
 import com.patrykandpatrick.vico.core.common.Defaults
-import com.patrykandpatrick.vico.core.common.VerticalPosition
+import com.patrykandpatrick.vico.core.common.Position
 import com.patrykandpatrick.vico.core.common.getRepeating
-import com.patrykandpatrick.vico.core.common.shape.CorneredShape
+import com.patrykandpatrick.vico.core.common.shape.Shape
 import com.patrykandpatrick.vico.views.R
 import com.patrykandpatrick.vico.views.cartesian.copyWithColor
 import com.patrykandpatrick.vico.views.cartesian.sharpFilledCandle
@@ -41,7 +41,7 @@ internal fun TypedArray.getColumnCartesianLayer(
   @StyleableRes styleableResourceId: IntArray = R.styleable.ColumnCartesianLayerStyle,
 ): ColumnCartesianLayer =
   getNestedTypedArray(context, resourceId, styleableResourceId).run {
-    val defaultShape = CorneredShape.rounded(Defaults.COLUMN_ROUNDNESS_PERCENT)
+    val defaultShape = Shape.Rectangle
     val mergeMode =
       when (getInteger(R.styleable.ColumnCartesianLayerStyle_mergeMode, 0)) {
         0 ->
@@ -110,9 +110,9 @@ internal fun TypedArray.getColumnCartesianLayer(
         } else {
           null
         },
-      dataLabelVerticalPosition =
-        VerticalPosition.entries[
-            getInteger(R.styleable.ColumnCartesianLayerStyle_dataLabelVerticalPosition, 0)],
+      dataLabelPosition =
+        Position.Vertical.entries[
+            getInteger(R.styleable.ColumnCartesianLayerStyle_dataLabelPosition, 0)],
       dataLabelRotationDegrees =
         getFloat(R.styleable.ColumnCartesianLayerStyle_dataLabelRotationDegrees, 0f),
     )
@@ -261,7 +261,7 @@ internal fun TypedArray.getCandlestickCartesianLayer(context: Context): Candlest
           else -> throw IllegalArgumentException("Unexpected `candleStyle` value.")
         }
       CandlestickCartesianLayer(
-        candles = candleProvider,
+        candleProvider = candleProvider,
         minCandleBodyHeightDp =
           typedArray.getRawDimension(
             context,

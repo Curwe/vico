@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 by Patryk Goworowski and Patrick Michalik.
+ * Copyright 2025 by Patryk Goworowski and Patrick Michalik.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,9 @@ import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.core.cartesian.data.LineCartesianLayerDrawingModel
 import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.cartesian.layer.getDefaultAreaFill
 import com.patrykandpatrick.vico.core.common.Defaults
+import com.patrykandpatrick.vico.core.common.Position
 import com.patrykandpatrick.vico.core.common.ValueWrapper
-import com.patrykandpatrick.vico.core.common.VerticalPosition
 import com.patrykandpatrick.vico.core.common.component.Component
 import com.patrykandpatrick.vico.core.common.component.TextComponent
 import com.patrykandpatrick.vico.core.common.data.CartesianLayerDrawingModelInterpolator
@@ -53,7 +52,7 @@ public fun rememberLineCartesianLayer(
   verticalAxisPosition: Axis.Position.Vertical? = null,
   drawingModelInterpolator:
     CartesianLayerDrawingModelInterpolator<
-      LineCartesianLayerDrawingModel.PointInfo,
+      LineCartesianLayerDrawingModel.Entry,
       LineCartesianLayerDrawingModel,
     > =
     remember {
@@ -95,39 +94,34 @@ public fun LineCartesianLayer.Companion.rememberLine(
     vicoTheme.lineCartesianLayerColors.first().let { color ->
       remember(color) { LineCartesianLayer.LineFill.single(fill(color)) }
     },
-  thickness: Dp = Defaults.LINE_SPEC_THICKNESS_DP.dp,
-  areaFill: LineCartesianLayer.AreaFill? = remember(fill) { fill.getDefaultAreaFill() },
-  cap: StrokeCap = StrokeCap.Round,
+  stroke: LineCartesianLayer.LineStroke = LineCartesianLayer.LineStroke.continuous(),
+  areaFill: LineCartesianLayer.AreaFill? = null,
   pointProvider: LineCartesianLayer.PointProvider? = null,
-  pointConnector: LineCartesianLayer.PointConnector = remember {
-    LineCartesianLayer.PointConnector.cubic()
-  },
+  pointConnector: LineCartesianLayer.PointConnector = LineCartesianLayer.PointConnector.Sharp,
   dataLabel: TextComponent? = null,
-  dataLabelVerticalPosition: VerticalPosition = VerticalPosition.Top,
+  dataLabelPosition: Position.Vertical = Position.Vertical.Top,
   dataLabelValueFormatter: CartesianValueFormatter = remember { CartesianValueFormatter.decimal() },
   dataLabelRotationDegrees: Float = 0f,
 ): LineCartesianLayer.Line =
   remember(
     fill,
-    thickness,
+    stroke,
     areaFill,
-    cap,
     pointProvider,
     pointConnector,
     dataLabel,
-    dataLabelVerticalPosition,
+    dataLabelPosition,
     dataLabelRotationDegrees,
     dataLabelRotationDegrees,
   ) {
     LineCartesianLayer.Line(
       fill,
-      thickness.value,
+      stroke,
       areaFill,
-      cap.paintCap,
       pointProvider,
       pointConnector,
       dataLabel,
-      dataLabelVerticalPosition,
+      dataLabelPosition,
       dataLabelValueFormatter,
       dataLabelRotationDegrees,
     )
@@ -150,3 +144,24 @@ private val StrokeCap.paintCap: Paint.Cap
           "Not `StrokeCap.Butt`, `StrokeCap.Round`, or `StrokeCap.Square`."
         )
     }
+
+/** Creates a [LineCartesianLayer.LineStroke.Continuous] instance. */
+public fun LineCartesianLayer.LineStroke.Companion.continuous(
+  thickness: Dp = Defaults.LINE_SPEC_THICKNESS_DP.dp,
+  cap: StrokeCap = StrokeCap.Butt,
+): LineCartesianLayer.LineStroke.Continuous =
+  LineCartesianLayer.LineStroke.Continuous(thickness.value, cap.paintCap)
+
+/** Creates a [LineCartesianLayer.LineStroke.Dashed] instance. */
+public fun LineCartesianLayer.LineStroke.Companion.dashed(
+  thickness: Dp = Defaults.LINE_SPEC_THICKNESS_DP.dp,
+  cap: StrokeCap = StrokeCap.Butt,
+  dashLength: Dp = Defaults.LINE_DASH_LENGTH.dp,
+  gapLength: Dp = Defaults.LINE_GAP_LENGTH.dp,
+): LineCartesianLayer.LineStroke.Dashed =
+  LineCartesianLayer.LineStroke.Dashed(
+    thickness.value,
+    cap.paintCap,
+    dashLength.value,
+    gapLength.value,
+  )
